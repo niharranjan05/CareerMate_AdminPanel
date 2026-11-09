@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Log in — CareerMate Admin{% endblock %}
+{% block body %}
+<div class="auth-wrap">
+  <form class="auth-card" method="post" action="{{ url_for('login') }}">
+    <div class="auth-brand">
+      <span class="auth-logo">🤖</span>
+      <div>
+        <div class="auth-title">Career<span>Mate</span></div>
+        <div class="auth-sub">Admin Analytics</div>
+      </div>
+    </div>
+
+    {% if error %}
+      <div class="auth-error">⚠️ {{ error }}</div>
+    {% endif %}
+
+    <label class="field-label" for="username">Username</label>
+    <input class="field-input" type="text" id="username" name="username" autocomplete="username" required autofocus>
+
+    <label class="field-label" for="password">Password</label>
+    <input class="field-input" type="password" id="password" name="password" autocomplete="current-password" required>
+
+    <button class="auth-btn" type="submit">Log in</button>
+
+    <p class="auth-note">Access is restricted to the admin account configured on the backend.</p>
+  </form>
+</div>
+{% endblock %}

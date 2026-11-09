@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block bodyattrs %} data-page="{{ active }}"{% endblock %}
+{% macro nav(endpoint, key, icon, label) -%}
+<a href="{{ url_for(endpoint) }}" class="nav-item {{ 'active' if active == key }}">
+  <svg class="ic"><use href="#i-{{ icon }}"/></svg><span>{{ label }}</span>
+</a>
+{%- endmacro %}
+{% block body %}
+{% include "_icons.html" %}
+<div class="app-shell">
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <img class="sidebar-logo-img" src="{{ url_for('static', filename='img/logo.png') }}" alt="CareerMate">
+      <div>
+        <div class="sidebar-title">Career<span>Mate</span></div>
+        <div class="sidebar-sub">{% block sidebar_sub %}Admin Panel{% endblock %}</div>
+      </div>
+      <button class="sidebar-close" id="sidebarClose" aria-label="Close menu"><svg class="ic" style="width:16px;height:16px"><use href="#i-x"/></svg></button>
+    </div>
+
+    <nav class="sidebar-nav">
+      {{ nav('dashboard', 'dashboard', 'house', 'Dashboard') }}
+      {{ nav('users', 'users', 'users', 'Users') }}
+      {{ nav('features', 'features', 'chart-column', 'Feature Analytics') }}
+      {{ nav('resume', 'resume', 'file-text', 'Resume & ATS') }}
+      {{ nav('quiz', 'quiz', 'trophy', 'Quiz Analytics') }}
+      {{ nav('jobs', 'jobs', 'search', 'Job Search') }}
+      {{ nav('feedback', 'feedback', 'message-square', 'Feedback') }}
+      <div class="nav-label">Learning Analytics</div>
+      <a href="{{ url_for('notes') }}" class="nav-item {{ 'active' if active == 'notes' }}"><i class="fa-brands fa-youtube nav-yt"></i><span>YouTube Notes</span></a>
+      <a href="{{ url_for('pdf_analytics') }}" class="nav-item {{ 'active' if active == 'pdf' }}"><i class="fa-regular fa-file-lines nav-fa"></i><span>Chat with PDF</span></a>
+      <a href="{{ url_for('books_analytics') }}" class="nav-item {{ 'active' if active == 'books' }}"><i class="fa-solid fa-book-open nav-fa"></i><span>Books Analytics</span></a>
+      <a href="{{ url_for('pyq_analytics') }}" class="nav-item {{ 'active' if active == 'pyq' }}"><i class="fa-solid fa-graduation-cap nav-fa"></i><span>PYQ Analytics</span></a>
+      <a href="{{ url_for('ai_providers') }}" class="nav-item {{ 'active' if active == 'ai' }}"><i class="fa-solid fa-plug-circle-bolt nav-fa"></i><span>AI Providers</span></a>
+      {{ nav('system', 'system', 'activity', 'System Health') }}
+      {{ nav('settings', 'settings', 'settings', 'Settings') }}
+    </nav>
+
+    {% block sidebar_promo %}
+    <div class="sidebar-promo">
+      <img class="promo-bot" src="{{ url_for('static', filename='img/bot.png') }}" alt="">
+      <div class="promo-title">CareerMate<br><span>Your Career Assistant</span></div>
+      <div class="promo-text">Helping students find better opportunities!</div>
+      <a class="promo-btn" href="https://wa.me/" target="_blank" rel="noopener">View Bot <svg class="ic" style="width:14px;height:14px"><use href="#i-arrow-right"/></svg></a>
+    </div>
+    {% endblock %}
+    <div class="sidebar-spacer"></div>
+    <div class="sidebar-footer">© 2025 CareerMate &middot; v1.0.0</div>
+  </aside>
+
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="icon-btn menu-toggle" id="menuToggle" aria-label="Toggle menu"><svg class="ic"><use href="#i-menu"/></svg></button>
+        <div>
+          <div class="topbar-welcome">Welcome back, {{ (username or "Admin")|title }} <span class="wave">👋</span></div>
+          <div class="topbar-sub">Here's what's happening with your CareerMate bot.</div>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="range-select">
+          <svg class="ic"><use href="#i-calendar"/></svg>
+          <select id="globalRange">
+            <option value="7">Last 7 Days</option>
+            <option value="30">Last 30 Days</option>
+            <option value="90">Last 90 Days</option>
+          </select>
+          <svg class="ic chev"><use href="#i-chevron-down"/></svg>
+        </div>
+        <span class="status-pill" id="connStatus"><span class="conn-dot conn-ok"></span>Backend Online</span>
+        {% block topbar_bell %}
+        <button class="icon-btn bell-btn" id="bellBtn" aria-label="Notifications">
+          <svg class="ic"><use href="#i-bell"/></svg>
+          <span class="bell-badge" id="bellBadge" hidden>0</span>
+        </button>
+        {% endblock %}
+        <div class="admin-menu">
+          <button class="admin-chip" id="adminChip">
+            <span class="admin-avatar">{{ (username or "A")[0]|upper }}</span>
+            <span>{{ (username or "Admin")|title }}</span>
+            <svg class="ic"><use href="#i-chevron-down"/></svg>
+          </button>
+          <div class="admin-dropdown" id="adminDropdown">
+            <a href="{{ url_for('settings') }}"><i class="fa-solid fa-gear"></i> Settings</a>
+            <a href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket"></i> Log out</a>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="wrap">
+      <div class="page-head">
+        {% block page_icon_wrap %}<div class="page-head-icon"><i class="fa-solid {% block page_icon %}fa-chart-line{% endblock %}"></i></div>{% endblock %}
+        <div>
+          <h1 class="page-title">{% block page_title %}{% endblock %}</h1>
+          {% block page_subtitle_wrap %}<p class="page-sub">{% block page_subtitle %}{% endblock %}</p>{% endblock %}
+        </div>
+        <div class="page-actions">{% block page_actions %}{% endblock %}</div>
+      </div>
+
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% block scripts %}{% endblock %}
+{% endblock %}

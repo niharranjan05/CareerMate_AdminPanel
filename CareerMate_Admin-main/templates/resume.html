@@ -1,0 +1,162 @@
+{% extends "shell.html" %}
+{% block title %}Resume & ATS — CareerMate Admin{% endblock %}
+{% block page_icon_wrap %}<div class="pg-ic"><svg class="ic"><use href="#i-file-text"/></svg></div>{% endblock %}
+{% block page_title %}Resume &amp; ATS Analytics{% endblock %}
+{% block page_subtitle %}Track resume uploads, ATS scores and analysis results.{% endblock %}
+{% block page_actions %}
+<label class="pg-search wide"><svg class="ic"><use href="#i-search"/></svg><input id="resSearch" type="text" placeholder="Search by phone, file or keyword..."></label>
+<button class="pg-btn" id="exportBtn"><svg class="ic"><use href="#i-download"/></svg> Export Report</button>
+{% endblock %}
+
+{% block content %}
+<div class="dash rs-page">
+  <section class="d-kpis">
+    <article class="d-kpi big k-blue"><div class="d-kpi-ic sq"><svg class="ic"><use href="#i-cloud-upload"/></svg></div>
+      <div><div class="d-kpi-label">Total Resumes</div><div class="d-kpi-value" id="rTotal">—</div><div class="d-kpi-delta" id="rTotalD"></div></div></article>
+    <article class="d-kpi big k-amber"><div class="d-kpi-ic sq gold"><svg class="ic"><use href="#i-star"/></svg></div>
+      <div><div class="d-kpi-label">Avg. ATS Score</div><div class="d-kpi-value" id="rAvg">—</div><div class="d-kpi-delta" id="rAvgD"></div></div></article>
+    <article class="d-kpi big k-green"><div class="d-kpi-ic sq"><svg class="ic"><use href="#i-circle-check"/></svg></div>
+      <div><div class="d-kpi-label">High Scores (&ge; 80%)</div><div class="d-kpi-value" id="rHigh">—</div><div class="d-kpi-delta" id="rHighD"></div></div></article>
+    <article class="d-kpi big k-pink"><div class="d-kpi-ic sq pink"><svg class="ic"><use href="#i-triangle-alert"/></svg></div>
+      <div><div class="d-kpi-label">Needs Improvement</div><div class="d-kpi-value" id="rLow">—</div><div class="d-kpi-delta" id="rLowD"></div></div></article>
+  </section>
+
+  <section class="d-row rs-r1">
+    <div class="d-panel">
+      <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-trending-up"/></svg></div><h3>ATS Score Trend</h3>
+        <div class="d-legend"><span class="dot" style="background:#17b4ff"></span>Average Score <span class="dot" style="background:#1de08f;margin-left:10px"></span>Best Score</div></div>
+      <div class="d-chart tall"><canvas id="chartAtsTrend"></canvas></div>
+    </div>
+    <div class="d-panel">
+      <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-chart-pie"/></svg></div><h3>Score Distribution</h3></div>
+      <div class="d-donut-row">
+        <div class="d-donut"><canvas id="chartDist"></canvas><div class="d-donut-center"><b id="distTotal">0</b><span>Resumes</span></div></div>
+        <ul class="d-legend-list rs-dl" id="distLegend"></ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="d-row rs-r2">
+    <div class="d-panel">
+      <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-chart-column"/></svg></div><h3>ATS Score Breakdown</h3></div>
+      <div class="d-chart tall2"><canvas id="chartBreakdown"></canvas></div>
+      <div class="d-empty" id="bdEmpty" hidden><div class="ei"><svg class="ic"><use href="#i-chart-column"/></svg></div><b>No breakdown data yet</b><span>Log content / keywords / skills / format sub-scores with each ATS analysis.</span></div>
+    </div>
+    <div class="d-panel">
+      <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-briefcase"/></svg></div><h3>Top Skills Detected</h3></div>
+      <div id="topSkills"></div>
+    </div>
+    <div class="d-panel">
+      <div class="d-head"><div class="d-head-ic bare gold"><svg class="ic"><use href="#i-lightbulb"/></svg></div><h3>Quick Insights</h3></div>
+      <ul class="rs-ins" id="insights"></ul>
+      <a class="rs-detail" href="#recent">View Detailed Analysis <svg class="ic"><use href="#i-arrow-right"/></svg></a>
+    </div>
+  </section>
+
+  <section class="d-panel" id="recent">
+    <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-file-text"/></svg></div><h3>Recent Resume Analyses</h3>
+      <a class="fa-va" href="#" id="viewAll">View All <svg class="ic"><use href="#i-arrow-right"/></svg></a></div>
+    <div class="d-table-wrap"><table class="d-table rs-table">
+      <thead><tr><th>#</th><th>File Name</th><th>Phone Number</th><th>ATS Score</th><th>Status</th><th>Key Skills</th><th>Analyzed On</th><th>Actions</th></tr></thead>
+      <tbody id="recentBody"></tbody></table></div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function init_resume() {
+  const state = { days: Number(sessionStorage.getItem("cm_range") || 7), search: "", all: false };
+  const ICON = (n) => `<svg class="ic"><use href="#i-${n}"/></svg>`;
+  const GRID = "rgba(90,115,210,.16)", TICK = "#9ea5cf";
+  const $ = (id) => document.getElementById(id);
+  const mk = (id, cfg) => { const c = $(id); destroyChart(c); c._chart = new Chart(c, cfg); };
+  const shortDate = (iso) => new Date(iso + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const fullDT = (iso) => { const d = new Date(String(iso).replace(" ", "T")); return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) + " " + d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }); };
+  const DIST = ["#1de08f", "#17b4ff", "#ffcf3f", "#ff5c9d"];
+  const SK = ["#17b4ff", "#1de08f", "#ffcf3f", "#a97bff", "#ff5c9d"];
+  const BD = ["#17b4ff", "#1de08f", "#ffcf3f", "#a97bff"];
+  let recent = [];
+
+  function delta(el, v, kind, vs, goodDown) {
+    if (v == null) { el.innerHTML = `<span class="vs">${vs}</span>`; return; }
+    const up = v > 0, flat = v === 0;
+    const txt = kind === "pct" ? `${Math.abs(v)}%` : `${v > 0 ? "+" : ""}${v}`;
+    const good = goodDown ? v <= 0 : v >= 0;
+    el.innerHTML = `<span class="${flat ? "flat" : good ? "up" : "down"}">${flat ? "" : ICON(up ? "arrow-up" : "arrow-down")} ${kind === "pct" ? (up ? "+" : v < 0 ? "−" : "") + txt : txt}</span><span class="vs">${vs}</span>`;
+  }
+  const pill = (s) => s == null ? "—" : `<span class="sc ${s >= 85 ? "g" : s >= 70 ? "b" : s >= 60 ? "y" : "r"}">${s}%</span>`;
+  const STAT = { Excellent: "t-green", Good: "t-blue", Average: "t-blue", "Needs Improvement": "t-amber", Failed: "t-pink" };
+
+  function renderRecent() {
+    let list = recent.filter((r) => !state.search || [r.phone, r.filename, r.skills, r.status].join(" ").toLowerCase().includes(state.search));
+    if (!state.all && !state.search) list = list.slice(0, 5);
+    $("recentBody").innerHTML = list.length ? list.map((r, i) => `
+      <tr><td>${i + 1}</td>
+      <td><span class="rf"><span class="fx ${r.ext === "docx" || r.ext === "doc" ? "doc" : "pdf"}">${ICON("file-text")}</span><span><b>${esc(r.filename || "Resume")}</b>${r.size_mb ? `<small>(${esc(r.size_mb)} MB)</small>` : ""}</span></span></td>
+      <td>${esc(r.phone)}</td><td>${pill(r.score)}</td>
+      <td><span class="ud-tag ${STAT[r.status] || "t-blue"}">${esc(r.status)}</span></td>
+      <td class="dim">${esc(r.skills || "—")}</td><td>${esc(fullDT(r.time))}</td>
+      <td><span class="u-acts"><a class="u-act eye" href="/users/${encodeURIComponent(r.phone)}" title="View user">${ICON("eye")}</a><button class="u-act eye" disabled title="Resume files aren't stored by the bot yet">${ICON("download")}</button></span></td></tr>`).join("") :
+      '<tr><td colspan="8" class="d-none-yet" style="text-align:center">No resume analyses in this period</td></tr>';
+  }
+
+  async function load() {
+    const { start, end } = rangeDates(state.days);
+    const d = await fetchJSON(`/api/data/resume/page?start=${start}&end=${end}`);
+    const vs = `vs. last ${state.days} days`;
+    $("rTotal").textContent = fmt(d.total); delta($("rTotalD"), d.total_delta, "n", vs);
+    $("rAvg").textContent = d.avg_score != null ? d.avg_score + "%" : "—"; delta($("rAvgD"), d.avg_delta_pct, "pct", vs);
+    $("rHigh").textContent = fmt(d.high); delta($("rHighD"), d.high_delta, "n", vs);
+    $("rLow").textContent = fmt(d.low); delta($("rLowD"), d.low_delta, "n", vs, true);
+
+    const t = d.trend;
+    const line = (data, color, fill) => ({ data, borderColor: color, borderWidth: 2.5, tension: .3, pointRadius: 4, pointBackgroundColor: color, pointBorderColor: "#071037", pointBorderWidth: 2, spanGaps: true, fill,
+      backgroundColor: (ctx) => { const a = ctx.chart.chartArea; if (!a) return "transparent"; const g = ctx.chart.ctx.createLinearGradient(0, a.top, 0, a.bottom); g.addColorStop(0, "rgba(23,180,255,.30)"); g.addColorStop(1, "rgba(23,180,255,0)"); return g; } });
+    mk("chartAtsTrend", { type: "line", data: { labels: t.labels.map(shortDate), datasets: [line(t.best, "#1de08f", false), line(t.avg, "#17b4ff", true)] },
+      options: { responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false }, plugins: { legend: { display: false }, tooltip: { backgroundColor: "#0b1444", borderColor: "#1c244b", borderWidth: 1 } },
+        scales: { x: { grid: { color: GRID }, border: { display: false }, ticks: { color: TICK, font: { size: 11 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8, padding: 8 } },
+                  y: { min: 0, max: 100, grid: { color: GRID }, border: { display: false }, ticks: { color: TICK, stepSize: 20, padding: 6 }, title: { display: true, text: "ATS Score (%)", color: TICK, font: { size: 11 } } } } } });
+
+    $("distTotal").textContent = fmt(d.total);
+    mk("chartDist", { type: "doughnut", options: { responsive: true, maintainAspectRatio: false, cutout: "55%", plugins: { legend: { display: false } } },
+      data: { labels: d.distribution.map((x) => x.label), datasets: [{ data: d.total ? d.distribution.map((x) => x.count) : [1], backgroundColor: d.total ? DIST : ["#18214f"], borderColor: "#071037", borderWidth: 2 }] } });
+    $("distLegend").innerHTML = d.distribution.map((x, i) => `<li><span class="dot" style="background:${DIST[i]}"></span><span class="n">${x.label}</span><span class="c">${x.count}</span><span class="p">${fmtPct(x.pct)}</span></li>`).join("");
+
+    /* breakdown */
+    const bd = d.breakdown || [];
+    $("bdEmpty").hidden = bd.length > 0;
+    $("chartBreakdown").parentElement.hidden = bd.length === 0;
+    if (bd.length) {
+      const lp = { id: "vals", afterDatasetsDraw(chart) { const { ctx } = chart; ctx.save(); ctx.fillStyle = "#fff"; ctx.font = "500 12px Ubuntu, sans-serif"; ctx.textAlign = "center";
+        chart.getDatasetMeta(0).data.forEach((b, i) => ctx.fillText(chart.data.datasets[0].data[i] + "%", b.x, b.y - 6)); ctx.restore(); } };
+      mk("chartBreakdown", { type: "bar", plugins: [lp], data: { labels: bd.map((x) => x.label), datasets: [{ data: bd.map((x) => x.value), backgroundColor: BD, borderRadius: 3, barPercentage: .8, categoryPercentage: .9 }] },
+        options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 18 } }, plugins: { legend: { display: false } },
+          scales: { x: { grid: { display: false }, border: { display: false }, ticks: { color: "#cfd6f6" } }, y: { min: 0, max: 100, grid: { color: GRID }, border: { display: false }, ticks: { color: TICK, stepSize: 20 } } } } });
+    }
+
+    /* top skills */
+    $("topSkills").innerHTML = (d.top_skills || []).map((s, i) => `
+      <div class="rs-sk"><span class="n">${esc(s.skill)}</span><span class="track"><i style="width:${s.pct}%;background:${SK[i % 5]}"></i></span><span class="p">${s.pct}%</span></div>`).join("") ||
+      '<div class="d-empty"><div class="ei">' + ICON("briefcase") + '</div><b>No skills data yet</b><span>Log detected skills with each ATS analysis.</span></div>';
+
+    /* insights */
+    const ins = [];
+    if (d.avg_delta_pct != null && d.avg_score != null) ins.push(["g", `Average score ${d.avg_delta_pct >= 0 ? "improved" : "dropped"} by <b class="c-green">${Math.abs(d.avg_delta_pct)}%</b> compared to last ${state.days} days.`]);
+    if (d.top_skill) ins.push(["b", `${esc(d.top_skill)} is the most detected skill.`]);
+    ins.push(["g", `${d.high} resume${d.high === 1 ? "" : "s"} scored above 80%.`]);
+    ins.push(["y", `${d.low} resume${d.low === 1 ? "" : "s"} need${d.low === 1 ? "s" : ""} more keywords.`]);
+    $("insights").innerHTML = ins.map(([c, h]) => `<li><i class="ic-dot ${c}"></i><span>${h}</span></li>`).join("");
+
+    recent = d.recent || [];
+    renderRecent();
+  }
+
+  $("resSearch").addEventListener("input", (e) => { state.search = e.target.value.trim().toLowerCase(); renderRecent(); });
+  $("viewAll").addEventListener("click", (e) => { e.preventDefault(); state.all = true; renderRecent(); });
+  $("exportBtn").addEventListener("click", () => toast("Export isn't wired up yet — coming soon."));
+  document.addEventListener("rangechange", (e) => { state.days = Number(e.detail.days); load(); });
+  load();
+}
+</script>
+{% endblock %}

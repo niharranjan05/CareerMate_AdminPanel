@@ -1,0 +1,201 @@
+{% extends "shell.html" %}
+{% block title %}Quiz Analytics — CareerMate Admin{% endblock %}
+{% block page_icon_wrap %}<div class="pg-ic gold"><svg class="ic"><use href="#i-trophy"/></svg></div>{% endblock %}
+{% block page_title %}Quiz Analytics{% endblock %}
+{% block page_subtitle %}Track quiz participation, scores and performance.{% endblock %}
+{% block page_actions %}
+<label class="pg-select"><svg class="ic"><use href="#i-file-text"/></svg><select id="quizFilter"><option value="">All Quizzes</option></select><svg class="ic chev"><use href="#i-chevron-down"/></svg></label>
+<label class="pg-search"><svg class="ic"><use href="#i-search"/></svg><input id="quizSearch" type="text" placeholder="Search by phone or name..."></label>
+<button class="pg-btn" id="exportBtn"><svg class="ic"><use href="#i-download"/></svg> Export Report</button>
+{% endblock %}
+
+{% block content %}
+<div class="dash qz">
+  <section class="qz-kpis">
+    <article class="d-kpi big k-blue"><div class="d-kpi-ic sq"><svg class="ic"><use href="#i-users"/></svg></div>
+      <div><div class="d-kpi-label">Total Quiz Attempts</div><div class="d-kpi-value" id="kAttempts">—</div><div class="d-kpi-delta" id="kAttemptsD"></div></div></article>
+    <article class="d-kpi big k-green"><div class="d-kpi-ic sq"><svg class="ic"><use href="#i-circle-check"/></svg></div>
+      <div><div class="d-kpi-label" id="kDoneL">Completed</div><div class="d-kpi-value"><span id="kDone">—</span> <small class="rt g" id="kDoneR"></small></div><div class="d-kpi-delta" id="kDoneD"></div></div></article>
+    <article class="d-kpi big k-purple"><div class="d-kpi-ic sq vio"><svg class="ic"><use href="#i-log-in"/></svg></div>
+      <div><div class="d-kpi-label">Left in Between</div><div class="d-kpi-value"><span id="kLeft">—</span> <small class="rt p" id="kLeftR"></small></div><div class="d-kpi-delta" id="kLeftD"></div></div></article>
+    <article class="d-kpi big k-amber"><div class="d-kpi-ic sq gold"><svg class="ic"><use href="#i-star"/></svg></div>
+      <div><div class="d-kpi-label">Average Score</div><div class="d-kpi-value" id="kAvg">—</div><div class="d-kpi-delta" id="kAvgD"></div></div></article>
+    <article class="d-kpi big k-amber"><div class="d-kpi-ic sq amber"><svg class="ic"><use href="#i-clock"/></svg></div>
+      <div><div class="d-kpi-label">Avg. Time Taken</div><div class="d-kpi-value" id="kTime">—</div><div class="d-kpi-delta" id="kTimeD"></div></div></article>
+  </section>
+
+  <section class="d-row qz-r1">
+    <div class="d-panel">
+      <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-trending-up"/></svg></div><h3>Quiz Attempts Trend</h3>
+        <div class="d-legend"><span class="dot" style="background:#1de08f"></span><span id="lgDone">Completed</span> <span class="dot" style="background:#17b4ff;margin-left:10px"></span>Left in Between</div></div>
+      <div class="d-chart tall"><canvas id="chartTrend"></canvas></div>
+    </div>
+    <div class="d-panel">
+      <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-users"/></svg></div><h3>Completion Rate</h3></div>
+      <div class="d-donut-row">
+        <div class="d-donut sm2"><canvas id="chartRate"></canvas><div class="d-donut-center"><b id="rateTxt">0%</b><span>Completed</span></div></div>
+        <ul class="d-legend-list qz-dl" id="rateLegend"></ul>
+      </div>
+    </div>
+    <div class="d-panel">
+      <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-users"/></svg></div><h3>Score Distribution</h3></div>
+      <div class="d-chart tall"><canvas id="chartDist"></canvas></div>
+    </div>
+  </section>
+
+  <section class="d-row qz-r2">
+    <div class="d-panel">
+      <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-chart-column"/></svg></div><h3>Top Performing Topics</h3><a class="fa-va" href="#" data-more="topics">View All <svg class="ic"><use href="#i-arrow-right"/></svg></a></div>
+      <div class="d-table-wrap"><table class="d-table qz-table"><thead><tr><th>#</th><th>Topic</th><th>Attempts</th><th>Avg. Score</th><th>Completion Rate</th></tr></thead><tbody id="topicBody"></tbody></table></div>
+    </div>
+    <div class="d-panel">
+      <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-file-text"/></svg></div><h3>Recent Quiz Attempts</h3><a class="fa-va" href="#" data-more="recent">View All <svg class="ic"><use href="#i-arrow-right"/></svg></a></div>
+      <div class="d-table-wrap"><table class="d-table qz-table"><thead><tr><th>#</th><th>User</th><th>Phone Number</th><th>Quiz</th><th>Score</th><th>Status</th><th>Attempted On</th><th>Action</th></tr></thead><tbody id="recentBody"></tbody></table></div>
+    </div>
+  </section>
+
+  <section class="d-row qz-r3">
+    <div class="d-panel">
+      <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-users"/></svg></div><h3>Per User Quiz Analytics</h3>
+        <label class="pg-search sm"><svg class="ic"><use href="#i-search"/></svg><input id="userSearch" type="text" placeholder="Search users by phone number..."></label></div>
+      <div class="d-table-wrap"><table class="d-table qz-table"><thead><tr><th>#</th><th>User</th><th>Phone Number</th><th>Total Attempts</th><th>Completed</th><th>Avg. Score</th><th>Action</th></tr></thead><tbody id="usersBody"></tbody></table></div>
+    </div>
+    <div class="d-panel" id="userPanel">
+      <div class="d-none-yet" id="upEmpty">Select a user to see their quiz analytics.</div>
+      <div id="upBody" hidden>
+        <div class="qz-uh"><span class="ud-av sm" id="upAv">U</span><div><b id="upName">User</b><div class="ph" id="upPhone"></div></div><span class="d-pill ok">Active</span></div>
+        <nav class="qz-tabs"><button class="active" data-t="overview"><svg class="ic"><use href="#i-house"/></svg> Overview</button><button data-t="attempts"><svg class="ic"><use href="#i-file-text"/></svg> Quiz Attempts</button><button data-t="perf"><svg class="ic"><use href="#i-chart-column"/></svg> Performance</button><button data-t="weak"><svg class="ic"><use href="#i-star"/></svg> Weak Topics</button></nav>
+        <div id="upTab"></div>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function init_quiz() {
+  const state = { days: Number(sessionStorage.getItem("cm_range") || 7), topic: "", search: "", usearch: "", more: { topics: false, recent: false }, sel: null, tab: "overview" };
+  const ICON = (n) => `<svg class="ic"><use href="#i-${n}"/></svg>`;
+  const GRID = "rgba(90,115,210,.16)", TICK = "#9ea5cf";
+  const $ = (id) => document.getElementById(id);
+  const mk = (id, cfg) => { const c = $(id); destroyChart(c); c._chart = new Chart(c, cfg); };
+  const shortDate = (iso) => new Date(iso + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const fullDT = (iso) => { const d = new Date(String(iso).replace(" ", "T")); return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) + " " + d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }); };
+  const scCls = (p) => (p == null ? "" : p >= 80 ? "g" : p >= 70 ? "g" : p >= 60 ? "y" : "r");
+  const ST = { Passed: "pass", Failed: "fail", Left: "prog", "In Progress": "prog" };
+  const AV = ["#2f7bff", "#ffb23e", "#8d9bff", "#ff4f7e", "#13c9a0"];
+  let data = null;
+
+  function dl(el, v, goodDown, vs) {
+    if (v == null) { el.innerHTML = `<span class="vs">${vs}</span>`; return; }
+    const up = v > 0, flat = v === 0, good = goodDown ? v <= 0 : v >= 0;
+    el.innerHTML = `<span class="${flat ? "flat" : good ? "up" : "down"}">${flat ? "" : ICON(up ? "arrow-up" : "arrow-down")} ${up ? "+" : v < 0 ? "−" : ""}${Math.abs(v)}%</span><span class="vs">${vs}</span>`;
+  }
+  const nq = () => { const o = (data.options || []).find((x) => x.topic === (state.topic || "")); return o && o.questions ? o.questions : null; };
+
+  function renderTables() {
+    const s = state.search;
+    const topics = data.topics.filter((t) => !s || t.topic.toLowerCase().includes(s));
+    $("topicBody").innerHTML = (state.more.topics ? topics : topics.slice(0, 5)).map((t, i) => {
+      const cr = t.completion_pct || 0, col = cr >= 75 ? "#1de08f" : cr >= 60 ? "#ffcf3f" : "#ff5c9d";
+      return `<tr><td>${i + 1}</td><td><b>${esc(t.topic)}</b></td><td>${fmt(t.attempts)}</td><td class="sc2 ${scCls(t.avg_pct)}">${t.avg_pct != null ? fmtPct(t.avg_pct) : "—"}</td>
+        <td><span class="cr"><b class="sc2 ${cr >= 75 ? "g" : cr >= 60 ? "y" : "r"}">${fmtPct(cr)}</b><span class="track"><i style="width:${cr}%;background:${col}"></i></span></span></td></tr>`; }).join("") ||
+      '<tr><td colspan="5" class="d-none-yet" style="text-align:center">No quiz topics in this period</td></tr>';
+
+    const rec = data.recent.filter((r) => !s || (r.label + r.phone + r.topic).toLowerCase().includes(s));
+    $("recentBody").innerHTML = (state.more.recent ? rec : rec.slice(0, 5)).map((r, i) => `
+      <tr><td>${i + 1}</td><td><span class="u-who"><span class="av sm" style="background:${AV[i % 5]}">${'U'}</span>${esc(r.label)}</span></td>
+      <td>${esc(r.phone)}</td><td>${esc(r.topic)} Quiz</td><td class="sc2 ${scCls(r.pct)}">${r.pct != null ? r.pct + "%" : "—"}</td>
+      <td><span class="qs ${ST[r.status]}" title="${esc(r.detail || "")}">${esc(r.status)}</span></td><td class="dim">${esc(fullDT(r.time))}</td>
+      <td><a class="u-act eye" href="/users/${encodeURIComponent(r.phone)}">${ICON("eye")}</a></td></tr>`).join("") ||
+      '<tr><td colspan="8" class="d-none-yet" style="text-align:center">No quiz attempts in this period</td></tr>';
+
+    const us = data.users.filter((u) => !state.usearch || (u.phone + u.label).toLowerCase().includes(state.usearch));
+    $("usersBody").innerHTML = us.slice(0, 10).map((u, i) => `
+      <tr class="${state.sel === u.phone ? "sel" : ""}"><td>${i + 1}</td><td><span class="u-who"><span class="av sm" style="background:${AV[i % 5]}">${'U'}</span>${esc(u.label)}</span></td>
+      <td>${esc(u.phone)}</td><td>${fmt(u.attempts)}</td><td class="sc2 ${u.completed_pct >= 75 ? "g" : u.completed_pct >= 60 ? "y" : "r"}">${u.completed} (${u.completed_pct}%)</td>
+      <td class="sc2 ${scCls(u.avg_pct)}">${u.avg_pct != null ? fmtPct(u.avg_pct) : "—"}</td>
+      <td><button class="va" data-u="${esc(u.phone)}">View Analytics ${ICON("arrow-right")}</button></td></tr>`).join("") ||
+      '<tr><td colspan="7" class="d-none-yet" style="text-align:center">No users found</td></tr>';
+    document.querySelectorAll(".va").forEach((b) => b.addEventListener("click", () => { state.sel = b.dataset.u; state.tab = "overview"; renderTables(); renderUser(); }));
+  }
+
+  function renderUser() {
+    const u = data.users.find((x) => x.phone === state.sel);
+    $("upEmpty").hidden = !!u; $("upBody").hidden = !u;
+    if (!u) return;
+    $("upAv").textContent = 'U'; $("upName").textContent = u.label; $("upPhone").textContent = u.phone;
+    document.querySelectorAll(".qz-tabs button").forEach((b) => b.classList.toggle("active", b.dataset.t === state.tab));
+    const rows = u.recent.map((r, i) => `<tr><td>${i + 1}</td><td>${esc(r.topic)} Quiz</td><td class="sc2 ${scCls(r.pct)}">${r.pct != null ? r.pct + "%" : "—"}</td><td><span class="qs ${ST[r.status]}">${esc(r.status)}</span></td><td class="dim">${esc(fullDT(r.time))}</td><td><a class="viewbtn" href="/users/${encodeURIComponent(u.phone)}">View</a></td></tr>`).join("") || '<tr><td colspan="6" class="d-none-yet">No attempts yet</td></tr>';
+    const tbl = `<table class="d-table qz-table"><thead><tr><th>#</th><th>Quiz Name</th><th>Score</th><th>Status</th><th>Date &amp; Time</th><th>Action</th></tr></thead><tbody>${rows}</tbody></table>`;
+    let h = "";
+    if (state.tab === "overview" || state.tab === "attempts") {
+      if (state.tab === "overview") h += `<div class="qz-ukpi">
+        <div class="b1"><small>Total Attempts</small><b>${u.attempts}</b><span class="${u.attempts_delta >= 0 ? "up" : "down"}">${ICON(u.attempts_delta >= 0 ? "arrow-up" : "arrow-down")} ${u.attempts_delta >= 0 ? "+" : ""}${u.attempts_delta}</span></div>
+        <div class="b2"><small>Completed</small><b>${u.completed} <i>(${u.completed_pct}%)</i></b></div>
+        <div class="b3"><small>Avg. Score</small><b>${u.avg_pct != null ? fmtPct(u.avg_pct) : "—"}</b></div>
+        <div class="b4"><small>Avg. Time</small><b>${u.avg_min != null ? u.avg_min + " min" : "—"}</b></div></div>`;
+      h += `<div class="d-sub-title" style="margin:12px 0 6px">Recent Attempts</div><div class="d-table-wrap">${tbl}</div>`;
+    } else if (state.tab === "perf") {
+      h = `<div class="d-chart sm"><canvas id="upChart"></canvas></div>`;
+    } else {
+      h = (u.weak_topics.length ? u.weak_topics.map((w) => `<div class="qz-weak"><span>${esc(w.topic)}</span><span class="track"><i style="width:${w.avg_pct}%;background:${w.avg_pct < 60 ? "#ff5c9d" : "#1de08f"}"></i></span><b>${fmtPct(w.avg_pct)}</b></div>`).join("") : '<div class="d-none-yet">No scored attempts yet</div>');
+    }
+    $("upTab").innerHTML = h;
+    if (state.tab === "perf") {
+      const rr = [...u.recent].reverse();
+      mk("upChart", { type: "line", data: { labels: rr.map((r) => shortDate(String(r.time).slice(0, 10))), datasets: [{ data: rr.map((r) => r.pct), borderColor: "#17b4ff", borderWidth: 2.5, tension: .3, pointRadius: 4, pointBackgroundColor: "#17b4ff", pointBorderColor: "#071037", pointBorderWidth: 2 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { color: GRID }, ticks: { color: TICK } }, y: { min: 0, max: 100, grid: { color: GRID }, ticks: { color: TICK, stepSize: 20 } } } } });
+    }
+  }
+
+  async function load() {
+    const { start, end } = rangeDates(state.days);
+    data = await fetchJSON(`/api/data/quiz/page?start=${start}&end=${end}&topic=${encodeURIComponent(state.topic)}`);
+    const sel = $("quizFilter");
+    if (sel.options.length <= 1) (data.options || []).forEach((o) => { const op = document.createElement("option"); op.value = o.topic; op.textContent = o.questions ? `${o.questions} Questions (${o.topic})` : o.topic; sel.appendChild(op); });
+    const n = nq(), vs = `vs. last ${state.days} days`;
+    $("kAttempts").textContent = fmt(data.attempts); dl($("kAttemptsD"), data.attempts_delta_pct, false, vs);
+    $("kDoneL").textContent = n ? `Completed (${n}/${n})` : "Completed"; $("lgDone").textContent = n ? `Completed (${n}/${n})` : "Completed";
+    $("kDone").textContent = fmt(data.completed); $("kDoneR").textContent = data.completed_rate != null ? `(${data.completed_rate}%)` : ""; dl($("kDoneD"), data.completed_delta_pct, false, vs);
+    $("kLeft").textContent = fmt(data.left); $("kLeftR").textContent = data.left_rate != null ? `(${data.left_rate}%)` : ""; dl($("kLeftD"), data.left_delta_pct, true, vs);
+    $("kAvg").textContent = data.avg_score != null ? data.avg_score + "%" : "—"; dl($("kAvgD"), data.avg_score_delta_pct, false, vs);
+    $("kTime").textContent = data.avg_min != null ? data.avg_min + " min" : "—"; dl($("kTimeD"), data.avg_min_delta_pct, true, vs);
+
+    const t = data.trend, ymax = Math.max(1, ...t.completed, ...t.left);
+    const ln = (arr, c, fill) => ({ data: arr, borderColor: c, borderWidth: 2.5, tension: .3, pointRadius: 4, pointBackgroundColor: c, pointBorderColor: "#071037", pointBorderWidth: 2, fill,
+      backgroundColor: (ctx) => { const a = ctx.chart.chartArea; if (!a) return "transparent"; const g = ctx.chart.ctx.createLinearGradient(0, a.top, 0, a.bottom); g.addColorStop(0, "rgba(29,224,143,.25)"); g.addColorStop(1, "rgba(29,224,143,0)"); return g; } });
+    mk("chartTrend", { type: "line", data: { labels: t.labels.map(shortDate), datasets: [ln(t.completed, "#1de08f", true), ln(t.left, "#17b4ff", false)] },
+      options: { responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false }, plugins: { legend: { display: false }, tooltip: { backgroundColor: "#0b1444", borderColor: "#1c244b", borderWidth: 1 } },
+        scales: { x: { grid: { color: GRID }, border: { display: false }, ticks: { color: TICK, font: { size: 11 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8, padding: 8 } },
+                  y: { beginAtZero: true, grid: { color: GRID }, border: { display: false }, ticks: { color: TICK, font: { size: 11 }, precision: 0, padding: 6 }, title: { display: true, text: "Number of Attempts", color: TICK, font: { size: 11 } } } } } });
+
+    $("rateTxt").textContent = data.completed_rate != null ? data.completed_rate + "%" : "0%";
+    mk("chartRate", { type: "doughnut", options: { responsive: true, maintainAspectRatio: false, cutout: "68%", plugins: { legend: { display: false } } },
+      data: { labels: ["Completed", "Left in Between"], datasets: [{ data: data.attempts ? [data.completed, data.left] : [1, 0], backgroundColor: data.attempts ? ["#1de08f", "#17b4ff"] : ["#18214f", "#18214f"], borderColor: "#071037", borderWidth: 2 }] } });
+    $("rateLegend").innerHTML = `<li><span class="dot" style="background:#1de08f"></span><span class="n">${n ? `Completed (${n}/${n})` : "Completed"}</span><span class="c">${fmt(data.completed)}</span><span class="p">${data.completed_rate != null ? data.completed_rate + "%" : "0%"}</span></li>
+      <li><span class="dot" style="background:#17b4ff"></span><span class="n">Left in Between</span><span class="c">${fmt(data.left)}</span><span class="p">${data.left_rate != null ? data.left_rate + "%" : "0%"}</span></li>`;
+
+    const dk = ["0-59", "60-69", "70-79", "80-89", "90-100"], dv = dk.map((k) => data.distribution[k] || 0);
+    const lp = { id: "vals", afterDatasetsDraw(chart) { const { ctx } = chart; ctx.save(); ctx.fillStyle = "#fff"; ctx.font = "500 12px Ubuntu, sans-serif"; ctx.textAlign = "center";
+      chart.getDatasetMeta(0).data.forEach((b, i) => ctx.fillText(chart.data.datasets[0].data[i], b.x, b.y - 6)); ctx.restore(); } };
+    mk("chartDist", { type: "bar", plugins: [lp], data: { labels: dk, datasets: [{ data: dv, backgroundColor: ["#ff4f7e", "#ffcf3f", "#1de08f", "#2f7bff", "#a97bff"], borderRadius: 3, barPercentage: .8, categoryPercentage: .9 }] },
+      options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 18 } }, plugins: { legend: { display: false } },
+        scales: { x: { grid: { display: false }, border: { display: false }, ticks: { color: "#cfd6f6" } }, y: { beginAtZero: true, grid: { color: GRID }, border: { display: false }, ticks: { color: TICK, precision: 0 }, title: { display: true, text: "Number of Users", color: TICK, font: { size: 11 } } } } } });
+
+    if (!state.sel && data.users[0]) state.sel = data.users[0].phone;
+    renderTables(); renderUser();
+  }
+
+  $("quizFilter").addEventListener("change", (e) => { state.topic = e.target.value; load(); });
+  $("quizSearch").addEventListener("input", (e) => { state.search = e.target.value.trim().toLowerCase(); if (data) renderTables(); });
+  $("userSearch").addEventListener("input", (e) => { state.usearch = e.target.value.trim().toLowerCase(); if (data) renderTables(); });
+  document.querySelectorAll("[data-more]").forEach((a) => a.addEventListener("click", (e) => { e.preventDefault(); state.more[a.dataset.more] = true; renderTables(); }));
+  document.querySelectorAll(".qz-tabs button").forEach((b) => b.addEventListener("click", () => { state.tab = b.dataset.t; renderUser(); }));
+  $("exportBtn").addEventListener("click", () => toast("Export isn't wired up yet — coming soon."));
+  document.addEventListener("rangechange", (e) => { state.days = Number(e.detail.days); load(); });
+  load();
+}
+</script>
+{% endblock %}

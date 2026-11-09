@@ -1,0 +1,128 @@
+{% extends "shell.html" %}
+{% block title %}Job Search — CareerMate Admin{% endblock %}
+{% block sidebar_sub %}Analytics Panel{% endblock %}
+{% block page_icon_wrap %}<div class="pg-ic cy"><svg class="ic"><use href="#i-search"/></svg></div>{% endblock %}
+{% block page_title %}CareerMate <span class="t-cyan">Analytics</span>{% endblock %}
+{% block page_subtitle %}Track usage of /job_search, /internships and /competitions{% endblock %}
+{% block page_actions %}
+<label class="pg-search wide"><svg class="ic"><use href="#i-search"/></svg><input id="jobSearchBox" type="text" placeholder="Search by domain, keyword..."></label>
+<button class="pg-btn grn" id="exportBtn"><svg class="ic"><use href="#i-download"/></svg> Export Report</button>
+{% endblock %}
+
+{% block content %}
+<div class="dash js">
+  <section class="d-row js-r1">
+    <div class="d-panel">
+      <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-activity"/></svg></div><div><h3>Function Usage</h3><p>Total usage of bot functions</p></div></div>
+      <div class="js-fn" id="fnCards"></div>
+    </div>
+    <div class="d-panel js-users">
+      <div class="js-ut"><span class="ui"><svg class="ic"><use href="#i-users"/></svg></span>
+        <div><div class="d-kpi-label">Total Users</div><div class="d-kpi-value" id="oUsers">—</div><div class="d-kpi-delta" id="oUsersD"></div></div></div>
+    </div>
+  </section>
+
+  <section class="d-row js-r2">
+    <div class="d-panel">
+      <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-users"/></svg></div><h3>Most Searched Domains</h3></div>
+      <div class="js-pair">
+        <div class="js-sub">
+          <div class="js-st"><span class="si b"><svg class="ic"><use href="#i-search"/></svg></span>Job Search – Top 5 Domains</div>
+          <div class="d-donut-row nowrap">
+            <div class="d-donut sm3"><canvas id="chartJob"></canvas><div class="d-donut-center"><b id="jobTotal">0</b><span>Total Searches</span></div></div>
+            <ul class="d-legend-list js-dl" id="jobLegend"></ul>
+          </div>
+        </div>
+        <div class="js-sub">
+          <div class="js-st"><span class="si g"><svg class="ic"><use href="#i-graduation-cap"/></svg></span>Internships – Top 5 Domains</div>
+          <div class="d-donut-row nowrap">
+            <div class="d-donut sm3"><canvas id="chartIntern"></canvas><div class="d-donut-center"><b id="internTotal">0</b><span>Total Searches</span></div></div>
+            <ul class="d-legend-list js-dl" id="internLegend"></ul>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="d-panel">
+      <div class="d-head"><div class="d-head-ic bare gold"><svg class="ic"><use href="#i-trophy"/></svg></div><h3>Top 5 Recent Competitions Shown</h3><a class="fa-va" href="{{ url_for('features') }}">View All <svg class="ic"><use href="#i-arrow-right"/></svg></a></div>
+      <div class="d-table-wrap"><table class="d-table js-table"><thead><tr><th>#</th><th>Competition Name</th><th>Domain</th><th>Date</th></tr></thead><tbody id="compBody"></tbody></table></div>
+    </div>
+  </section>
+
+  <section class="d-panel">
+    <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-users"/></svg></div><h3>Recent User Activity</h3><a class="fa-va" href="#" id="viewAll">View All <svg class="ic"><use href="#i-arrow-right"/></svg></a></div>
+    <div class="d-table-wrap"><table class="d-table js-table"><thead><tr><th>#</th><th>User</th><th>Phone Number</th><th>Function Used</th><th>Searched Domain / Category</th><th>Timestamp</th><th>Feature Tag</th><th></th></tr></thead><tbody id="oRecent"></tbody></table></div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function init_jobs() {
+  const state = { days: Number(sessionStorage.getItem("cm_range") || 7), search: "", all: false };
+  const ICON = (n) => `<svg class="ic"><use href="#i-${n}"/></svg>`;
+  const $ = (id) => document.getElementById(id);
+  const mk = (id, cfg) => { const c = $(id); destroyChart(c); c._chart = new Chart(c, cfg); };
+  const DC = ["#15c3ff", "#16e0a8", "#ffcf3f", "#a97bff", "#ff5c9d"];
+  const FN = { job_search: { cls: "fb", icon: "search" }, internships: { cls: "fg", icon: "graduation-cap" }, competitions: { cls: "fp", icon: "trophy" } };
+  const AV = ["#4d93ff", "#2fb4ff", "#4d93ff", "#ff4f98", "#ff4f98"];
+  const fullDT = (iso) => { const d = new Date(String(iso).replace(" ", "T")); return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) + " " + d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }); };
+  const fullD = (iso) => new Date(String(iso).replace(" ", "T")).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const TAGC = ["#c18bff", "#ff5c9d", "#4d93ff", "#ffcf3f", "#16e0a8"];
+  let data = null;
+
+  function dl(el, v, vs) {
+    if (v == null) { el.innerHTML = `<span class="vs">${vs}</span>`; return; }
+    const up = v >= 0;
+    el.innerHTML = `<span class="${up ? "up" : "down"}">${ICON(up ? "arrow-up" : "arrow-down")} ${Math.abs(v)}%</span><span class="vs">${vs}</span>`;
+  }
+  const match = (...parts) => !state.search || parts.join(" ").toLowerCase().includes(state.search);
+
+  function donut(canvas, totalEl, legendEl, total, items) {
+    const f = items.filter((i) => match(i.topic));
+    $(totalEl).textContent = fmt(total);
+    mk(canvas, { type: "doughnut", options: { responsive: true, maintainAspectRatio: false, cutout: "62%", plugins: { legend: { display: false } } },
+      data: { labels: f.map((i) => i.topic), datasets: [{ data: f.length ? f.map((i) => i.count) : [1], backgroundColor: f.length ? f.map((_, i) => DC[i % 5]) : ["#18214f"], borderColor: "#071037", borderWidth: 2 }] } });
+    $(legendEl).innerHTML = f.map((i, k) => `<li><span class="dot" style="background:${DC[k % 5]}"></span><span class="n">${esc(i.topic)}</span><span class="c">${fmt(i.count)}</span><span class="p">${fmtPct(i.pct)}</span></li>`).join("") || '<li class="d-none-yet">No data in this period</li>';
+  }
+
+  function renderRecent() {
+    let rows = data.recent.filter((r) => match(r.label, r.phone, r.function, r.domain || ""));
+    if (!state.all && !state.search) rows = rows.slice(0, 5);
+    $("oRecent").innerHTML = rows.map((r, i) => {
+      const k = r.function === "/job_search" ? "fb" : r.function === "/internships" ? "fg" : "fp";
+      return `<tr><td>${i + 1}</td><td><span class="u-who"><span class="av sm round" style="background:${AV[i % 5]}">U</span>${esc(r.label)}</span></td>
+      <td>${esc(r.phone)}</td><td><span class="fnp ${k}">${esc(r.function)}</span></td><td>${esc(r.domain || "—")}</td><td>${esc(fullDT(r.time))}</td>
+      <td><span class="tagp ${r.tag === "Search" ? "s" : "b"}">${esc(r.tag)}</span></td>
+      <td><a class="dots" href="/users/${encodeURIComponent(r.phone)}" title="View user">${ICON("ellipsis-vertical")}</a></td></tr>`; }).join("") ||
+      '<tr><td colspan="8" class="d-none-yet" style="text-align:center">No matching activity in this period</td></tr>';
+  }
+
+  async function load() {
+    const { start, end } = rangeDates(state.days);
+    data = await fetchJSON(`/api/data/opportunities/page?start=${start}&end=${end}`);
+    const vs = `vs. last ${state.days} days`;
+    $("fnCards").innerHTML = data.functions.map((f) => `
+      <div class="fnc ${FN[f.key].cls}"><span class="fi2">${ICON(FN[f.key].icon)}</span>
+      <div class="fb2"><div class="fname">${esc(f.label)}</div><div class="fval">${fmt(f.count)}</div><div class="d-kpi-delta">${f.delta_pct == null ? `<span class="vs">${vs}</span>` : `<span class="${f.delta_pct >= 0 ? "up" : "down"}">${ICON(f.delta_pct >= 0 ? "arrow-up" : "arrow-down")} ${Math.abs(f.delta_pct)}%</span><span class="vs">${vs}</span>`}</div></div>
+      <div class="fsh"><b>${fmtPct(f.share_pct)}</b><span>of total</span></div></div>`).join("");
+    $("oUsers").textContent = fmt(data.users); dl($("oUsersD"), data.users_delta_pct, vs);
+
+    donut("chartJob", "jobTotal", "jobLegend", data.job_total, data.job_domains);
+    donut("chartIntern", "internTotal", "internLegend", data.intern_total, data.intern_domains);
+
+    const CT = ["#a97bff", "#16e0a8", "#4d93ff", "#ffcf3f", "#ff5c9d"];
+    $("compBody").innerHTML = (data.competitions || []).filter((c) => match(c.name, c.domain || "")).map((c, i) => `
+      <tr><td><span class="nb" style="background:${CT[i % 5]}">${i + 1}</span></td><td>${esc(c.name)}</td>
+      <td><span class="dtag" style="--c:${CT[(i + 0) % 5]}">${esc(c.domain || "—")}</span></td><td class="dim">${esc(fullD(c.date))}</td></tr>`).join("") ||
+      '<tr><td colspan="4" class="d-none-yet" style="text-align:center">No competitions logged yet — log competition names in the /competitions event meta.</td></tr>';
+    renderRecent();
+  }
+
+  $("jobSearchBox").addEventListener("input", (e) => { state.search = e.target.value.trim().toLowerCase(); if (data) { donut("chartJob", "jobTotal", "jobLegend", data.job_total, data.job_domains); donut("chartIntern", "internTotal", "internLegend", data.intern_total, data.intern_domains); renderRecent(); } });
+  $("viewAll").addEventListener("click", (e) => { e.preventDefault(); state.all = true; renderRecent(); });
+  $("exportBtn").addEventListener("click", () => toast("Export isn't wired up yet — coming soon."));
+  document.addEventListener("rangechange", (e) => { state.days = Number(e.detail.days); load(); });
+  load();
+}
+</script>
+{% endblock %}

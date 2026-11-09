@@ -1,0 +1,167 @@
+{% extends "shell.html" %}
+{% block title %}Books Analytics — CareerMate Admin{% endblock %}
+{% block sidebar_sub %}Analytics Panel{% endblock %}
+{% block page_icon_wrap %}<div class="yn-ic bk"><i class="fa-solid fa-book-open"></i></div>{% endblock %}
+{% block page_title %}Books <span class="t-cyan">Analytics</span>{% endblock %}
+{% block page_subtitle %}Track usage of /books, popular categories, subtopics and book discovery performance.{% endblock %}
+{% block page_actions %}
+<label class="pg-search wide"><svg class="ic"><use href="#i-search"/></svg><input id="bkSearch" type="text" placeholder="Search by user, category, book title, subject..."></label>
+<button class="pg-btn grn" id="bkExport"><svg class="ic"><use href="#i-download"/></svg> Export Report</button>
+{% endblock %}
+
+{% block content %}
+<style>
+.yn-ic.bk{background:#2f6bff;width:46px;height:46px;border-radius:11px;font-size:20px}
+.bk-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
+.bk-r2{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1.2fr)}
+.bk-r3{grid-template-columns:minmax(0,.9fr) minmax(0,.9fr) minmax(0,1.2fr)}
+.bk-r4{grid-template-columns:minmax(0,1.9fr) minmax(0,1fr)}
+.bk-grid .d-panel{min-width:0;overflow:hidden}
+.bk-h{display:flex;align-items:center;gap:9px;margin-bottom:10px}.bk-h i{color:#4d93ff}.bk-h h3{margin:0;font-size:.92rem;font-weight:700;flex:1}
+.bk-h a{font-size:.75rem;color:#4da3ff}
+.bk-chart{position:relative;height:210px}
+.bk-bars .row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr) 36px;gap:8px;align-items:center;font-size:.78rem;padding:7px 0}
+.bk-bars .row span.n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bk-bars .bar{height:12px;border-radius:6px;background:#121a45;overflow:hidden}.bk-bars .bar i{display:block;height:100%;border-radius:6px}
+.bk-bars .v{text-align:right;font-weight:600}
+.bk-fun{display:flex;flex-direction:column;align-items:center;gap:6px;padding:4px 0}
+.bk-fun .st{height:38px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;color:#fff;font-size:.74rem;font-weight:600;clip-path:polygon(0 0,100% 0,96% 100%,4% 100%);min-width:150px}
+.bk-fun .st b{font-size:.9rem}
+.bk-fun .pc{font-size:.68rem;opacity:.85;margin-left:6px}
+.bk-t{width:100%;border-collapse:collapse;font-size:.76rem}
+.bk-t th{text-align:left;color:var(--ink-dim);font-weight:500;padding:7px 5px;border-bottom:1px solid var(--border)}
+.bk-t td{padding:8px 5px;border-bottom:1px solid var(--border)}
+.bk-t td.r,.bk-t th.r{text-align:right}
+.bk-t .t{display:flex;align-items:center;gap:7px}.bk-t .t i{color:#4d93ff}.bk-t .t span{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bk-t .u-who{gap:7px}.bk-t .u-who .av{width:24px;height:24px;font-size:.68rem}
+.bk-t td .lab{display:block;max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bk-empty{padding:18px;text-align:center;color:var(--ink-dim);font-size:.8rem}
+.bk-big{display:flex;align-items:center;gap:20px;justify-content:center;height:210px}
+.bk-big .yn-donut{width:150px;height:150px;flex:none}
+.bk-big ul{list-style:none;margin:0;padding:0;font-size:.82rem}.bk-big li{display:flex;align-items:center;gap:8px;padding:8px 0}.bk-big li b{margin-left:12px}
+@media(max-width:1250px){.bk-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.bk-r2,.bk-r3,.bk-r4{grid-template-columns:1fr}}
+@media(max-width:600px){.bk-kpis{grid-template-columns:1fr}}
+</style>
+<div class="yn-grid bk-grid">
+  <section class="yn-grid bk-kpis">
+    <div class="yn-kpi b"><span class="i"><i class="fa-solid fa-book-open"></i></span><div><label>Total Requests</label><b id="kReq">0</b><div class="dl" id="dReq"></div></div></div>
+    <div class="yn-kpi g"><span class="i"><i class="fa-solid fa-users"></i></span><div><label>Unique Users</label><b id="kUsr">0</b><div class="dl" id="dUsr"></div></div></div>
+    <div class="yn-kpi p"><span class="i"><i class="fa-regular fa-file-pdf"></i></span><div><label>Books Found</label><b id="kFnd">0</b><div class="dl" id="dFnd"></div></div></div>
+    <div class="yn-kpi r"><span class="i"><i class="fa-solid fa-triangle-exclamation"></i></span><div><label>Failed Searches</label><b id="kFail">0</b><div class="dl" id="dFail"></div></div></div>
+  </section>
+
+  <section class="yn-grid bk-r2">
+    <div class="d-panel"><div class="bk-h"><i class="fa-regular fa-folder-open"></i><h3>Most Popular Book Categories</h3></div>
+      <div class="yn-donutrow"><div class="yn-donut" style="width:150px;height:150px"><canvas id="cCat"></canvas><div class="c"><b id="catTotal">0</b><span>Total Selections</span></div></div><ul class="yn-leg" id="catLeg"></ul></div></div>
+    <div class="d-panel"><div class="bk-h"><i class="fa-solid fa-magnifying-glass"></i><h3>Most Searched Subtopics</h3></div><div class="bk-bars" id="subBars"></div></div>
+    <div class="d-panel"><div class="bk-h"><i class="fa-solid fa-chart-line"></i><h3>Search Method Comparison</h3>
+      <div class="yn-key"><span style="--c:#2f8bff">Topic-wise</span><span style="--c:#1de08f">Book name/Author</span></div></div><div class="bk-chart"><canvas id="cTrend"></canvas></div></div>
+  </section>
+
+  <section class="yn-grid bk-r3">
+    <div class="d-panel"><div class="bk-h"><i class="fa-solid fa-filter"></i><h3>Book Discovery Funnel</h3></div><div class="bk-fun" id="funnel"></div></div>
+    <div class="d-panel"><div class="bk-h"><i class="fa-solid fa-truck-fast"></i><h3>Book Delivery Performance</h3></div><div class="bk-chart"><canvas id="cDel"></canvas></div></div>
+    <div class="d-panel"><div class="bk-h"><i class="fa-solid fa-ranking-star"></i><h3>Top 5 Most Requested Books</h3><a href="#" id="bkTopAll">View All &rarr;</a></div>
+      <table class="bk-t"><thead><tr><th>#</th><th>Book Title</th><th class="r">Search Requests</th><th class="r">Results Found</th><th class="r">PDFs Sent</th></tr></thead><tbody id="tTop"></tbody></table></div>
+  </section>
+
+  <section class="yn-grid bk-r4">
+    <div class="d-panel"><div class="bk-h"><i class="fa-regular fa-clock"></i><h3>Recent Activity</h3><a href="#" id="bkAll">View All &rarr;</a></div>
+      <div class="d-table-wrap"><table class="bk-t"><thead><tr><th>#</th><th>User</th><th>Search Method</th><th>Category / Book</th><th>Result</th><th>Timestamp</th></tr></thead><tbody id="tRecent"></tbody></table></div></div>
+    <div class="d-panel"><div class="bk-h"><i class="fa-solid fa-lightbulb"></i><h3>Most Used Search Feature</h3></div>
+      <div class="bk-big"><div class="yn-donut"><canvas id="cMeth"></canvas><div class="c"><b id="mTotal">0</b><span>Total Searches</span></div></div><ul id="mLeg"></ul></div></div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function init_books() {
+  const $ = (id) => document.getElementById(id);
+  const state = { days: Number(sessionStorage.getItem("cm_range") || 30), search: "", all: false, allTop: false };
+  const COL = ["#2f7bff", "#16d9a1", "#a66cff", "#ffb74d", "#ff4f98", "#9fb4ff"];
+  const BAR = ["#2f9bff", "#2f7bff", "#a66cff", "#ff8a4d", "#ff4f98", "#16d9a1"];
+  const FUN = ["#3b82ff", "#7b5cf5", "#a66cff", "#ffb020", "#1fd08f"];
+  const MC = { topic: "#2f8bff", name: "#1de08f" };
+  let data = null;
+  const mk = (id, cfg) => { const c = $(id); destroyChart(c); c._chart = new Chart(c, cfg); };
+  const local = (s) => new Date(String(s).replace(" ", "T") + "Z");
+  const dt = (s) => { const d = local(s); return d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) + ", " + d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }); };
+  const sd = (s) => local(s + " 12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const match = (...p) => !state.search || p.join(" ").toLowerCase().includes(state.search);
+  const empty = (c, m) => `<tr><td colspan="${c}" class="bk-empty">${m}</td></tr>`;
+
+  function delta(el, d, vs, goodDown) {
+    if (d == null) { el.innerHTML = `<span class="vs">${vs}</span>`; return; }
+    const up = d >= 0, good = goodDown ? !up : up;
+    el.innerHTML = `<span class="${good ? "up" : "down"}"><i class="fa-solid fa-arrow-${up ? "up" : "down"}"></i> ${up ? "+" : "-"}${Math.abs(d)}%</span><span class="vs">${vs}</span>`;
+  }
+  const RES = { sent: ["ok", "PDF(s) sent"], alts: ["warn", "Alternatives offered"], none: ["bad", "No results"], incomplete: ["pending", "Incomplete"] };
+
+  function renderTop() {
+    const rows = state.allTop ? data.top_books_all || data.top_books : data.top_books;
+    $("tTop").innerHTML = rows.map((b, i) => `<tr><td>${i + 1}</td><td><span class="t"><i class="fa-solid fa-book"></i><span title="${esc(b.title)}">${esc(b.title)}</span></span></td><td class="r">${fmt(b.requests)}</td><td class="r">${fmt(b.found)}</td><td class="r">${fmt(b.sent)}</td></tr>`).join("") || empty(5, "No book requests yet");
+  }
+  function renderRecent() {
+    const rec = data.recent.filter((r) => match(r.user, r.phone, r.method, r.label, RES[r.status][1]));
+    const rows = state.all || state.search ? rec : rec.slice(0, 5);
+    $("tRecent").innerHTML = rows.map((r, i) => `<tr><td>${i + 1}</td><td><span class="u-who"><span class="av sm round" style="background:#4d93ff">${esc(r.user.slice(-1))}</span><a href="/users/${encodeURIComponent(r.phone)}">${esc(r.user)}</a></span></td>
+      <td>${esc(r.method)}</td><td><span class="lab" title="${esc(r.label)}">${esc(r.label)}</span></td><td><span class="yn-st ${RES[r.status][0]}">${RES[r.status][1]}</span></td><td>${esc(dt(r.time))}</td></tr>`).join("") || empty(6, "No /books activity in this period.");
+  }
+
+  function render() {
+    const k = data.kpis, vs = `vs. last ${data.days} days`;
+    $("kReq").textContent = fmt(k.requests.value); $("kUsr").textContent = fmt(k.users.value); $("kFnd").textContent = fmt(k.found.value); $("kFail").textContent = fmt(k.failed.value);
+    delta($("dReq"), k.requests.delta, vs); delta($("dUsr"), k.users.delta, vs); delta($("dFnd"), k.found.delta, vs); delta($("dFail"), k.failed.delta, vs, true);
+
+    $("catTotal").textContent = fmt(data.category_total);
+    const has = data.categories.length > 0;
+    mk("cCat", { type: "doughnut", options: { responsive: true, maintainAspectRatio: false, cutout: "58%", plugins: { legend: { display: false } } },
+      data: { labels: data.categories.map((c) => c.name), datasets: [{ data: has ? data.categories.map((c) => c.count) : [1], backgroundColor: has ? COL : ["#18214f"], borderColor: "#071037", borderWidth: 2 }] } });
+    $("catLeg").innerHTML = data.categories.map((c, i) => `<li><span class="dot" style="background:${COL[i % 6]}"></span><span class="n">${esc(c.name)}</span><span class="p">${fmtPct(c.pct)}</span></li>`).join("") || '<li class="yn-empty">No data yet</li>';
+
+    $("subBars").innerHTML = data.subtopics.map((s, i) => `<div class="row"><span class="n" title="${esc(s.name)}">${esc(s.name)}</span><span class="bar"><i style="width:${Math.max(6, s.pct)}%;background:${BAR[i % 6]}"></i></span><span class="v">${fmt(s.count)}</span></div>`).join("") || '<div class="bk-empty">No subtopic searches yet</div>';
+
+    const t = data.trend;
+    mk("cTrend", { type: "line", data: { labels: t.labels.map(sd), datasets: [
+        { label: "Topic-wise", data: t.topic, borderColor: MC.topic, tension: 0.3, pointRadius: 2, borderWidth: 2 },
+        { label: "Book name / Author", data: t.name, borderColor: MC.name, tension: 0.3, pointRadius: 2, borderWidth: 2 }] },
+      options: { responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false }, plugins: { legend: { display: false } },
+        scales: { x: { ticks: { color: "#a3afe0", maxTicksLimit: 8 }, grid: { color: "#121a45" } }, y: { beginAtZero: true, ticks: { color: "#a3afe0", precision: 0 }, grid: { color: "#1c244b" } } } } });
+
+    const f = data.funnel, top = Math.max(1, f[0].count);
+    $("funnel").innerHTML = f.map((x, i) => `<div class="st" style="width:${Math.max(48, 100 - i * 11)}%;background:${FUN[i]}"><span>${esc(x.name)}</span><span><b>${fmt(x.count)}</b><span class="pc">${fmtPct(x.pct)}</span></span></div>`).join("");
+
+    const dv = data.delivery;
+    mk("cDel", { type: "bar", data: { labels: ["Books found", "PDFs sent", "Alternatives shown", "No results"], datasets: [{ data: [dv.found, dv.sent, dv.alts, dv.none], backgroundColor: ["#16d9a1", "#2f8bff", "#ffb020", "#ff4f6d"], borderRadius: 5, maxBarThickness: 38 }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+        scales: { x: { ticks: { color: "#cfd6f7", font: { size: 10 } }, grid: { display: false } }, y: { beginAtZero: true, ticks: { color: "#a3afe0", precision: 0 }, grid: { color: "#1c244b" } } } } });
+
+    $("mTotal").textContent = fmt(data.method_total);
+    const mh = data.method_total > 0;
+    mk("cMeth", { type: "doughnut", options: { responsive: true, maintainAspectRatio: false, cutout: "62%", plugins: { legend: { display: false } } },
+      data: { labels: data.methods.map((m) => m.name), datasets: [{ data: mh ? data.methods.map((m) => m.count) : [1], backgroundColor: mh ? data.methods.map((m) => MC[m.key]) : ["#18214f"], borderColor: "#071037", borderWidth: 2 }] } });
+    $("mLeg").innerHTML = data.methods.map((m) => `<li><span class="dot" style="background:${MC[m.key]}"></span>${esc(m.name)}<b>${fmtPct(m.pct)}</b></li>`).join("");
+    renderTop(); renderRecent();
+  }
+
+  async function load() {
+    const { start, end } = rangeDates(state.days);
+    data = await fetchJSON(`/api/data/learning/books?start=${start}&end=${end}`);
+    render();
+  }
+  const q = (v) => '"' + String(v ?? "").replace(/"/g, '""') + '"';
+  $("bkExport").addEventListener("click", () => {
+    if (!data || !data.recent.length) return toast("No activity to export in this period.", true);
+    const rows = [["time_utc", "user", "phone", "search_method", "category_or_book", "result"]].concat(data.recent.map((r) => [r.time, r.user, r.phone, r.method, r.label, RES[r.status][1]]));
+    const blob = new Blob(["﻿" + rows.map((r) => r.map(q).join(",")).join("\n")], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `books_${data.start}_to_${data.end}.csv`; a.click(); URL.revokeObjectURL(a.href);
+  });
+  $("bkSearch").addEventListener("input", (e) => { state.search = e.target.value.trim().toLowerCase(); if (data) renderRecent(); });
+  $("bkAll").addEventListener("click", (e) => { e.preventDefault(); state.all = true; if (data) renderRecent(); });
+  $("bkTopAll").addEventListener("click", (e) => { e.preventDefault(); toast("Showing the top 5 requested books."); });
+  document.addEventListener("rangechange", (e) => { state.days = Number(e.detail.days); load(); });
+  load();
+}
+</script>
+{% endblock %}

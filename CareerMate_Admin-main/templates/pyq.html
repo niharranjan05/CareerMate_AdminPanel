@@ -1,0 +1,174 @@
+{% extends "shell.html" %}
+{% block title %}PYQ Analytics — CareerMate Admin{% endblock %}
+{% block sidebar_sub %}Analytics Panel{% endblock %}
+{% block page_icon_wrap %}<div class="yn-ic pq"><i class="fa-solid fa-graduation-cap"></i></div>{% endblock %}
+{% block page_title %}PYQ <span class="t-cyan">Analytics</span>{% endblock %}
+{% block page_subtitle %}Track PYQ sessions, papers delivered, completion and delivery success across University, Company and Interview PYQs.{% endblock %}
+{% block page_actions %}
+<label class="pg-search wide"><svg class="ic"><use href="#i-search"/></svg><input id="pqSearch" type="text" placeholder="Search by university, company, topic, etc..."></label>
+<button class="pg-btn grn" id="pqExport"><svg class="ic"><use href="#i-download"/></svg> Export Report</button>
+{% endblock %}
+
+{% block content %}
+<style>
+.yn-ic.pq{background:#6a4cf0;width:46px;height:46px;border-radius:11px;font-size:20px}
+.pq-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
+.pq-r2{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,.95fr)}
+.pq-r3{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);align-items:start}
+.pq-r2 .d-panel,.pq-r3 .d-panel{min-width:0;overflow:hidden}
+.pq-sub{margin:-6px 0 10px;font-size:.78rem;color:var(--ink-dim)}
+.pq-h{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.pq-h .hi{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;color:#fff;font-size:15px;flex:none}
+.pq-h h3{margin:0;font-size:.95rem;font-weight:700}.pq-h h3 span{font-weight:400;color:var(--ink-dim)}
+.pq-uni{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:12px;align-items:center}
+.pq-box{border:1px solid var(--border);border-radius:12px;padding:12px;background:var(--panel2);min-width:0}
+.pq-box h4{margin:0 0 8px;font-size:.82rem}
+.pq-t{width:100%;border-collapse:collapse;font-size:.76rem}
+.pq-t th{text-align:left;color:var(--ink-dim);font-weight:500;padding:6px 6px;border-bottom:1px solid var(--border)}
+.pq-t td{padding:7px 6px;border-bottom:1px solid var(--border)}
+.pq-t td:last-child,.pq-t th:last-child{text-align:right}.pq-t td .nm{display:block;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pq-bar{display:inline-block;width:100%;max-width:130px;height:11px;border-radius:6px;background:#121a45;overflow:hidden;vertical-align:middle}
+.pq-bar i{display:block;height:100%;border-radius:6px}
+.pq-tt{display:grid;grid-template-columns:22px minmax(0,1.3fr) minmax(0,1fr) 48px;gap:8px;align-items:center;font-size:.76rem;padding:6px 4px;border-bottom:1px solid var(--border)}
+.pq-tt .p{text-align:right}
+.pq-chart{position:relative;height:230px}
+.pq-note{font-size:.7rem;color:var(--ink-dim);margin-top:8px}
+.pq-recent td:nth-child(2),.pq-recent td:nth-child(5){white-space:nowrap}
+.pq-recent .yn-title{max-width:105px}
+.pq-recent .d-table-wrap{overflow-x:auto}.pq-recent .d-table td:last-child,.pq-recent .d-table th:last-child{padding-right:4px}
+.pq-recent .d-table{font-size:.72rem}.pq-recent .d-table th,.pq-recent .d-table td{padding:8px 5px}
+.pq-recent .u-who{gap:7px}.pq-recent .u-who .av{width:26px;height:26px;font-size:.7rem}
+@media(max-width:1250px){.pq-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.pq-r2,.pq-r3{grid-template-columns:1fr}}
+@media(max-width:600px){.pq-kpis{grid-template-columns:1fr}.pq-uni{grid-template-columns:1fr}}
+</style>
+<div class="yn-grid">
+  <section class="yn-grid pq-kpis">
+    <div class="yn-kpi b"><span class="i"><i class="fa-regular fa-file-lines"></i></span><div><label>Total PYQ Sessions</label><b id="kSess">0</b><div class="dl" id="dSess"></div></div></div>
+    <div class="yn-kpi g"><span class="i"><i class="fa-solid fa-file-arrow-down"></i></span><div><label>Papers / Q&amp;A Delivered</label><b id="kPap">0</b><div class="dl" id="dPap"></div></div></div>
+    <div class="yn-kpi p"><span class="i"><i class="fa-solid fa-check"></i></span><div><label>Completion Rate</label><b id="kComp">0%</b><div class="dl" id="dComp"></div></div></div>
+    <div class="yn-kpi r"><span class="i"><i class="fa-solid fa-bullseye"></i></span><div><label>Delivery Success Rate</label><b id="kSucc">0%</b><div class="dl" id="dSucc"></div></div></div>
+  </section>
+
+  <section class="yn-grid pq-r2">
+    <div class="d-panel">
+      <div class="pq-h"><span class="hi" style="background:#2f7bff"><i class="fa-solid fa-building-columns"></i></span><h3>1. University PYQ <span>– Top Universities</span></h3></div>
+      <div class="pq-sub">Which universities are most active?</div>
+      <div class="pq-uni">
+        <div class="pq-chart" style="height:200px"><canvas id="cUni"></canvas></div>
+        <div class="pq-box"><h4>Top Universities</h4><table class="pq-t"><thead><tr><th>#</th><th>University</th><th>Sessions</th></tr></thead><tbody id="tUni"></tbody></table></div>
+      </div>
+      <div class="pq-note" id="uniNote"></div>
+    </div>
+    <div class="d-panel">
+      <div class="pq-h"><span class="hi" style="background:#ff8a2f"><i class="fa-solid fa-briefcase"></i></span><h3>2. Company-wise PYQ <span>– Top Companies</span></h3></div>
+      <div class="pq-sub">Which companies are most searched?</div>
+      <div class="yn-donutrow"><div class="yn-donut" style="width:140px;height:140px"><canvas id="cComp"></canvas><div class="c"><b id="cmTotal">0</b><span>Total Queries</span></div></div><ul class="yn-leg" id="cmLeg"></ul></div>
+      <div class="pq-box" style="margin-top:10px"><h4>Top 5 Companies</h4><table class="pq-t"><thead><tr><th>#</th><th>Company</th><th>Papers</th><th>%</th></tr></thead><tbody id="tComp"></tbody></table></div>
+    </div>
+    <div class="d-panel">
+      <div class="pq-h"><span class="hi" style="background:#17b978"><i class="fa-solid fa-user-tie"></i></span><h3>3. Common Interview Questions</h3></div>
+      <div class="pq-box"><div class="yn-donutrow"><div class="yn-donut" style="width:140px;height:140px"><canvas id="cInt"></canvas><div class="c"><b id="inTotal">0</b><span>Total Queries</span></div></div><ul class="yn-leg" id="inLeg"></ul></div></div>
+      <div class="pq-box" style="margin-top:10px"><h4>Technical Interview – Top Topics</h4><div id="techTopics"></div></div>
+    </div>
+  </section>
+
+  <section class="yn-grid pq-r3">
+    <div class="d-panel">
+      <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-trending-up"/></svg></div><h3>PYQ Session Trend</h3>
+        <div class="yn-key"><span style="--c:#15c3ff">Total Sessions</span><span style="--c:#1de08f">Papers Delivered</span><span style="--c:#d96bff">Completion Rate (%)</span></div></div>
+      <div class="pq-chart"><canvas id="cTrend"></canvas></div>
+    </div>
+    <div class="d-panel">
+      <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-users"/></svg></div><h3>Recent Activity</h3><a class="fa-va" href="#" id="pqAll">View All <svg class="ic"><use href="#i-arrow-right"/></svg></a></div>
+      <div class="d-table-wrap pq-recent"><table class="d-table js-table"><thead><tr><th>#</th><th>User</th><th>Section</th><th>Topic / Company</th><th>Timestamp</th><th>Status</th></tr></thead><tbody id="tRecent"></tbody></table></div>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function init_pyq() {
+  const $ = (id) => document.getElementById(id);
+  const state = { days: Number(sessionStorage.getItem("cm_range") || 30), search: "", all: false };
+  const COL = ["#2f7bff", "#16d9a1", "#a66cff", "#ffb74d", "#ff4f98", "#ff8a4d", "#9fb4ff"];
+  const INC = { hr: "#2f7bff", gd: "#17c9a0", tech: "#a66cff" };
+  const GRAD = ["#7b5cf5", "#3d86ff", "#2fb4ff", "#d96bff", "#a66cff", "#5d6cf0"];
+  let data = null;
+  const mk = (id, cfg) => { const c = $(id); destroyChart(c); c._chart = new Chart(c, cfg); };
+  const local = (s) => new Date(String(s).replace(" ", "T") + "Z");
+  const dt = (s) => { const d = local(s); return d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) + ", " + d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }); };
+  const sd = (s) => local(s + " 12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const match = (...p) => !state.search || p.join(" ").toLowerCase().includes(state.search);
+
+  function delta(el, d, vs, points) {
+    if (d == null) { el.innerHTML = `<span class="vs">${vs}</span>`; return; }
+    const up = d >= 0;
+    el.innerHTML = `<span class="${up ? "up" : "down"}"><i class="fa-solid fa-arrow-${up ? "up" : "down"}"></i> ${up ? "+" : "-"}${Math.abs(d)}%</span><span class="vs">${vs}</span>`;
+  }
+  const donut = (id, items, colors, key) => mk(id, { type: "doughnut", options: { responsive: true, maintainAspectRatio: false, cutout: "60%", plugins: { legend: { display: false } } },
+    data: { labels: items.map((i) => i.name), datasets: [{ data: items.some((i) => i[key]) ? items.map((i) => i[key]) : [1], backgroundColor: items.some((i) => i[key]) ? colors : ["#18214f"], borderColor: "#071037", borderWidth: 2 }] } });
+  const legend = (el, items, colors) => { el.innerHTML = items.map((i, k) => `<li><span class="dot" style="background:${colors[k]}"></span><span class="n">${esc(i.name)}</span><span class="p">${fmtPct(i.pct)}</span></li>`).join("") || '<li class="yn-empty">No data yet</li>'; };
+  const empty = (cols, msg) => `<tr><td colspan="${cols}" class="yn-empty">${msg}</td></tr>`;
+
+  function renderRecent() {
+    const rec = data.recent.filter((r) => match(r.user, r.phone, r.section, r.label, r.status));
+    const rows = state.all || state.search ? rec : rec.slice(0, 5);
+    const ST = { completed: ["ok", "Completed"], failed: ["bad", "Failed"], incomplete: ["pending", "Incomplete"] };
+    $("tRecent").innerHTML = rows.map((r, i) => `<tr><td>${i + 1}</td><td><span class="u-who"><span class="av sm round" style="background:#4d93ff">${esc(r.user.slice(-1))}</span><a href="/users/${encodeURIComponent(r.phone)}">${esc(r.user)}</a></span></td>
+      <td>${esc(r.section)}</td><td><div class="yn-title" title="${esc(r.label)}">${esc(r.label)}</div></td><td>${esc(dt(r.time))}</td><td><span class="yn-st ${ST[r.status][0]}">${ST[r.status][1]}</span></td></tr>`).join("") ||
+      empty(6, "No /pyq activity in this period.");
+  }
+
+  function render() {
+    const k = data.kpis, vs = `vs. last ${data.days} days`;
+    $("kSess").textContent = fmt(k.sessions.value); $("kPap").textContent = fmt(k.papers.value); $("kComp").textContent = fmtPct(k.completion.value); $("kSucc").textContent = fmtPct(k.success.value);
+    delta($("dSess"), k.sessions.delta, vs); delta($("dPap"), k.papers.delta, vs); delta($("dComp"), k.completion.delta, vs); delta($("dSucc"), k.success.delta, vs);
+
+    const top5 = data.universities.slice(0, 5), mx = Math.max(1, ...top5.map((u) => u.sessions));
+    mk("cUni", { type: "bar", data: { labels: top5.map((u) => u.name.length > 14 ? u.name.slice(0, 13) + "…" : u.name), datasets: [{ data: top5.map((u) => u.sessions), backgroundColor: top5.map((_, i) => COL[i % 7]), borderRadius: 4, maxBarThickness: 18 }] },
+      options: { indexAxis: "y", responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { color: "#a3afe0", precision: 0, maxTicksLimit: 4 }, grid: { color: "#1c244b" } }, y: { ticks: { color: "#cfd6f7", font: { size: 10 } }, grid: { display: false } } } } });
+    $("tUni").innerHTML = top5.map((u, i) => `<tr><td>${i + 1}</td><td><span class="nm" title="${esc(u.name)}">${esc(u.name)}</span></td><td>${fmt(u.sessions)}</td></tr>`).join("") || empty(3, "No university papers yet");
+    $("uniNote").textContent = data.university_total ? `${fmt(data.university_total)} university session(s) in this period.` : "";
+
+    $("cmTotal").textContent = fmt(data.company_total);
+    const cc = data.companies.map((_, i) => COL[i % 7]);
+    donut("cComp", data.companies.map((c) => ({ name: c.name, count: c.queries })), cc, "count"); legend($("cmLeg"), data.companies, cc);
+    $("tComp").innerHTML = data.companies.filter((c) => c.name !== "Other").slice(0, 5).map((c, i) => `<tr><td>${i + 1}</td><td><span class="nm" title="${esc(c.name)}">${esc(c.name)}</span></td><td>${fmt(c.papers)}</td><td>${fmtPct(c.pct)}</td></tr>`).join("") || empty(4, "No company searches yet");
+
+    $("inTotal").textContent = fmt(data.interview_total);
+    const ic = data.interview.map((i) => INC[i.key]);
+    donut("cInt", data.interview, ic, "count"); legend($("inLeg"), data.interview, ic);
+    $("techTopics").innerHTML = data.tech_topics.map((t, i) => `<div class="pq-tt"><span>${i + 1}</span><span title="${esc(t.name)}" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.name)}</span><span class="pq-bar"><i style="width:${Math.max(5, t.pct)}%;background:${GRAD[i % 6]}"></i></span><span class="p">${fmtPct(t.pct)}</span></div>`).join("") || '<div class="yn-empty">No technical questions yet</div>';
+
+    const t = data.trend;
+    mk("cTrend", { type: "line", data: { labels: t.labels.map(sd), datasets: [
+        { label: "Total Sessions", data: t.sessions, borderColor: "#15c3ff", backgroundColor: "#15c3ff22", tension: 0.25, pointRadius: 2, borderWidth: 2, yAxisID: "y" },
+        { label: "Papers Delivered", data: t.papers, borderColor: "#1de08f", backgroundColor: "#1de08f22", tension: 0.25, pointRadius: 2, borderWidth: 2, yAxisID: "y" },
+        { label: "Completion Rate (%)", data: t.completion, borderColor: "#d96bff", tension: 0.25, pointRadius: 2, borderWidth: 2, spanGaps: true, yAxisID: "y1" }] },
+      options: { responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false }, plugins: { legend: { display: false } },
+        scales: { x: { ticks: { color: "#a3afe0", maxTicksLimit: 9 }, grid: { color: "#121a45" } }, y: { beginAtZero: true, ticks: { color: "#a3afe0", precision: 0 }, grid: { color: "#1c244b" } },
+          y1: { position: "right", min: 0, max: 100, ticks: { color: "#d96bff", callback: (v) => v + "%" }, grid: { display: false } } } } });
+    renderRecent();
+  }
+
+  async function load() {
+    const { start, end } = rangeDates(state.days);
+    data = await fetchJSON(`/api/data/learning/pyq?start=${start}&end=${end}`);
+    render();
+  }
+
+  const q = (v) => '"' + String(v ?? "").replace(/"/g, '""') + '"';
+  $("pqExport").addEventListener("click", () => {
+    if (!data || !data.recent.length) return toast("No activity to export in this period.", true);
+    const rows = [["time_utc", "user", "phone", "section", "topic_or_company", "status"]].concat(data.recent.map((r) => [r.time, r.user, r.phone, r.section, r.label, r.status]));
+    const blob = new Blob(["﻿" + rows.map((r) => r.map(q).join(",")).join("\n")], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `pyq_${data.start}_to_${data.end}.csv`; a.click(); URL.revokeObjectURL(a.href);
+  });
+  $("pqSearch").addEventListener("input", (e) => { state.search = e.target.value.trim().toLowerCase(); if (data) renderRecent(); });
+  $("pqAll").addEventListener("click", (e) => { e.preventDefault(); state.all = true; if (data) renderRecent(); });
+  document.addEventListener("rangechange", (e) => { state.days = Number(e.detail.days); load(); });
+  load();
+}
+</script>
+{% endblock %}

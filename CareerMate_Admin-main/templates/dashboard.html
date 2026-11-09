@@ -1,0 +1,472 @@
+{% extends "shell.html" %}
+{% block title %}Dashboard — CareerMate Admin{% endblock %}
+{% block sidebar_sub %}Analytics Panel{% endblock %}
+{% block topbar_bell %}{% endblock %}
+{% block sidebar_promo %}
+<div class="promo-card">
+  <img src="{{ url_for('static', filename='img/promo.png') }}" alt="">
+  <div class="pc-body">
+    <div class="pc-title">Build Better<br>Careers Together</div>
+    <div class="pc-text">CareerMate helps students find the right opportunities!</div>
+    <div class="pc-bar"></div>
+  </div>
+</div>
+{% endblock %}
+{% block page_icon_wrap %}{% endblock %}
+{% block page_subtitle_wrap %}{% endblock %}
+{% block page_title %}CareerMate <span class="t-cyan">Analytics</span>{% endblock %}
+
+{% block content %}
+<div class="dash">
+
+  <!-- KPI cards -->
+  <section class="d-kpis">
+    <article class="d-kpi k-blue">
+      <div class="d-kpi-ic"><svg class="ic"><use href="#i-users"/></svg></div>
+      <div><div class="d-kpi-label">Total Users</div><div class="d-kpi-value" id="kTotalUsers">—</div><div class="d-kpi-delta" id="kTotalUsersDelta"></div></div>
+    </article>
+    <article class="d-kpi k-green">
+      <div class="d-kpi-ic"><svg class="ic"><use href="#i-message-square"/></svg></div>
+      <div><div class="d-kpi-label">Messages Processed</div><div class="d-kpi-value" id="kMessages">—</div><div class="d-kpi-delta" id="kMessagesDelta"></div></div>
+    </article>
+    <article class="d-kpi k-purple">
+      <div class="d-kpi-ic"><svg class="ic"><use href="#i-search"/></svg></div>
+      <div><div class="d-kpi-label">Job Searches</div><div class="d-kpi-value" id="kJobs">—</div><div class="d-kpi-delta" id="kJobsDelta"></div></div>
+    </article>
+    <article class="d-kpi k-amber">
+      <div class="d-kpi-ic"><svg class="ic"><use href="#i-shield-check"/></svg></div>
+      <div><div class="d-kpi-label">Success Rate</div><div class="d-kpi-value" id="kSuccess">—</div><div class="d-kpi-delta" id="kSuccessDelta"></div></div>
+    </article>
+  </section>
+
+  <!-- activity + donut -->
+  <section class="d-row r-2">
+    <div class="d-panel">
+      <div class="d-head">
+        <div class="d-head-ic c-blue"><svg class="ic"><use href="#i-trending-up"/></svg></div>
+        <div><h3>User Activity Over Time</h3><p>Daily active users (unique)</p></div>
+        <div class="d-legend"><span class="dot" style="background:#2f9bff"></span>Active Users</div>
+      </div>
+      <div class="d-chart tall"><canvas id="chartActivity"></canvas></div>
+    </div>
+    <div class="d-panel">
+      <div class="d-head">
+        <div class="d-head-ic c-blue"><svg class="ic"><use href="#i-chart-pie"/></svg></div>
+        <div><h3>Job Search by Domain</h3><p>Distribution of job searches</p></div>
+      </div>
+      <div class="d-donut-row">
+        <div class="d-donut"><canvas id="chartJobDonut"></canvas><div class="d-donut-center"><b id="jobDonutTotal">0</b><span>Total Searches</span></div></div>
+        <ul class="d-legend-list" id="jobDonutLegend"></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- top5 / hourly / most used -->
+  <section class="d-row r-3">
+    <div class="d-panel">
+      <div class="d-head">
+        <div class="d-head-ic c-blue"><svg class="ic"><use href="#i-chart-column"/></svg></div>
+        <div><h3>Top 5 Domains</h3><p>Search count by domain</p></div>
+      </div>
+      <div class="d-bars" id="topDomains"></div>
+    </div>
+    <div class="d-panel">
+      <div class="d-head">
+        <div class="d-head-ic c-teal solid"><svg class="ic"><use href="#i-clock"/></svg></div>
+        <div><h3>Hourly Activity</h3><p>User activity by hour</p></div>
+      </div>
+      <div class="d-chart"><canvas id="chartHourly"></canvas></div>
+    </div>
+    <div class="d-panel">
+      <div class="d-head">
+        <div class="d-head-ic c-yellow fill"><svg class="ic"><use href="#i-star"/></svg></div>
+        <div><h3>Most Used Features</h3><p>Based on usage count</p></div>
+      </div>
+      <div class="d-feats" id="mostUsed"></div>
+    </div>
+  </section>
+
+  <!-- funnel + quick stats -->
+  <section class="d-row r-funnel">
+    <div class="d-panel">
+      <div class="d-head">
+        <div class="d-head-ic c-blue fill"><svg class="ic"><use href="#i-filter"/></svg></div>
+        <div><h3>User Funnel</h3><p>Conversion flow</p></div>
+      </div>
+      <div class="d-funnel" data-funnel></div>
+    </div>
+    <div class="d-panel">
+      <div class="d-head">
+        <div class="d-head-ic c-blue"><svg class="ic"><use href="#i-chart-column"/></svg></div>
+        <div><h3>Quick Stats</h3></div>
+      </div>
+      <div class="d-qs">
+        <div class="d-qs-row"><svg class="ic"><use href="#i-puzzle"/></svg><span class="l">Avg. Searches per User</span><b class="v c-green" id="qAvgSearches">—</b><span class="d-badge" id="qBadge" hidden></span></div>
+        <div class="d-qs-row"><svg class="ic"><use href="#i-clock"/></svg><span class="l">Peak Usage Time</span><b class="v c-peri" id="qPeakTime">—</b></div>
+        <div class="d-qs-row"><svg class="ic c-purple"><use href="#i-calendar-days"/></svg><span class="l">Active Period</span><b class="v c-violet" id="qPeriod">Last 7 Days</b></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- funnel (second block as in the design) + bot performance -->
+  <section class="d-row r-funnel2">
+    <div class="d-panel">
+      <div class="d-head">
+        <div class="d-head-ic c-blue fill"><svg class="ic"><use href="#i-filter"/></svg></div>
+        <div><h3>User Funnel</h3><p>Conversion flow</p></div>
+      </div>
+      <div class="d-funnel" data-funnel></div>
+    </div>
+    <div class="d-panel">
+      <div class="d-head">
+        <div class="d-head-ic c-yellow fill"><svg class="ic"><use href="#i-zap"/></svg></div>
+        <div><h3>Bot Performance</h3></div>
+      </div>
+      <div class="d-chips">
+        <div class="d-chip"><span class="ci c-blue"><svg class="ic"><use href="#i-puzzle"/></svg></span><span class="l">Avg. Searches per User</span><b class="v c-green" id="bAvg">—</b></div>
+        <div class="d-chip"><span class="ci c-blue"><svg class="ic"><use href="#i-clock"/></svg></span><span class="l">Peak Usage Time</span><b class="v c-sky" id="bPeak">—</b></div>
+        <div class="d-chip"><span class="ci c-purple"><svg class="ic"><use href="#i-calendar-days"/></svg></span><span class="l">Active Period</span><b class="v c-violet" id="bPeriod">Last 7 Days</b></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- resume / quiz / bot performance -->
+  <section class="d-row r-triple">
+    <div class="d-panel">
+      <div class="d-head">
+        <div class="d-head-ic c-peri"><svg class="ic"><use href="#i-file-text"/></svg></div>
+        <div><h3>Resume &amp; ATS Analytics</h3></div>
+      </div>
+      <div class="d-stats s3">
+        <div class="d-stat st-blue"><b id="rResumes">0</b><span>Resumes Uploaded</span></div>
+        <div class="d-stat st-green"><b id="rAnalyses">0</b><span>ATS Analyses</span></div>
+        <div class="d-stat st-amber"><b><i id="rRt">0</i><small>ms</small></b><span>Avg. Response Time</span></div>
+      </div>
+      <div class="d-sub">
+        <div class="d-sub-title">ATS Score Distribution</div>
+        <div class="d-chart sm" id="atsChartBox" hidden><canvas id="chartAts"></canvas></div>
+        <div class="d-empty" id="atsEmpty">
+          <div class="ei"><svg class="ic"><use href="#i-file-text"/></svg></div>
+          <b>No resume analyses yet</b><span>Upload resumes to see ATS score distribution.</span>
+        </div>
+      </div>
+    </div>
+    <div class="d-panel">
+      <div class="d-head">
+        <div class="d-head-ic c-yellow fill"><svg class="ic"><use href="#i-trophy"/></svg></div>
+        <div><h3>Quiz Analytics</h3></div>
+      </div>
+      <div class="d-stats s4">
+        <div class="d-stat st-blue"><b id="qzStarted">0</b><span>Quizzes Started</span></div>
+        <div class="d-stat st-green"><b id="qzCompleted">0</b><span>Completed</span></div>
+        <div class="d-stat st-purple"><b id="qzQuestions">0</b><span>Questions Answered</span></div>
+        <div class="d-stat st-amber"><b id="qzAvg">0%</b><span>Avg. Score</span></div>
+      </div>
+      <div class="d-sub flat">
+        <div class="d-sub-title">Top Quiz Topics</div>
+        <div class="d-quiz-body">
+          <div class="d-ring" id="quizRingBox"><canvas id="chartQuiz" hidden></canvas><i id="quizRing"></i></div>
+          <div class="d-quiz-side" id="quizSide">
+            <div class="d-quiz-empty"><b>No quiz data yet</b><span>Start taking quizzes to see insights here.</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="d-panel">
+      <div class="d-head">
+        <div class="d-head-ic c-blue fill"><svg class="ic"><use href="#i-zap"/></svg></div>
+        <div><h3>Bot Performance</h3></div>
+      </div>
+      <div class="d-stats s2">
+        <div class="d-stat st-blue2"><b id="pReceived">0</b><span>Messages Received</span></div>
+        <div class="d-stat st-green"><b id="pProcessed">0</b><span>Processed Successfully</span></div>
+        <div class="d-stat st-pink"><b id="pFailed">0</b><span>Failed Messages</span></div>
+        <div class="d-stat st-violet"><b id="pRate">0%</b><span>Success Rate</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- system health + keep growing -->
+  <section class="d-row r-sys">
+    <div class="d-panel">
+      <div class="d-head">
+        <div class="d-head-ic c-pink fill"><svg class="ic"><use href="#i-heart"/></svg></div>
+        <div><h3>System Health &amp; Recent Errors</h3></div>
+      </div>
+      <div class="d-health" id="healthChipRow"></div>
+      <div class="d-table-wrap">
+        <table class="d-table">
+          <thead><tr><th>Time</th><th>Type</th><th>Message</th><th class="ta-c">Status</th></tr></thead>
+          <tbody id="errBody"></tbody>
+        </table>
+      </div>
+      <div class="d-viewall"><a href="{{ url_for('system') }}">View all &rarr;</a></div>
+    </div>
+    <div class="d-panel d-keep">
+      <div class="d-keep-top">
+        <img src="{{ url_for('static', filename='img/rocket.png') }}" alt="">
+        <div><h3>Keep Growing!</h3><p>Your bot is helping students find better career opportunities.</p></div>
+      </div>
+      <a class="d-keep-btn" href="{{ url_for('users') }}">View Detailed Reports <svg class="ic"><use href="#i-arrow-right"/></svg></a>
+    </div>
+  </section>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function init_dashboard() {
+  const days = () => Number(sessionStorage.getItem("cm_range") || 7);
+  const $ = (id) => document.getElementById(id);
+  const ICON = (n) => `<svg class="ic"><use href="#i-${n}"/></svg>`;
+  const TICK = "#9ea5cf";
+  const GRID = "rgba(90,115,210,.16)";
+  const DOMAIN_COLORS = ["#2f7bff", "#10e0b0", "#ffcf3f", "#a66cff", "#ff4f98"];
+  const DONUT_COLORS = ["#15c3ff", "#16e0a8", "#ffcf3f", "#a97bff", "#ff5c9d", "#8191d4"];
+
+  function shortDate(iso) {
+    const d = new Date(iso + "T00:00:00");
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  }
+  function hr12(h) {
+    h = ((h % 24) + 24) % 24;
+    return (h % 12 === 0 ? 12 : h % 12) + " " + (h < 12 ? "AM" : "PM");
+  }
+
+  function delta(el, t, label) {
+    if (!t || t.delta_pct == null) { el.innerHTML = `<span class="vs">${label}</span>`; return; }
+    const dir = t.direction === "down" ? "down" : "up";
+    el.innerHTML = `<span class="${dir}">${ICON(dir === "down" ? "arrow-down" : "arrow-up")} ${Math.abs(t.delta_pct)}%</span><span class="vs">${label}</span>`;
+  }
+
+  function legendHtml(items, total) {
+    return items.map((t, i) => `
+      <li><span class="dot" style="background:${DONUT_COLORS[i % DONUT_COLORS.length]}"></span>
+      <span class="n">${esc(t.topic)}</span><span class="c">${fmt(t.count)}</span>
+      <span class="p">${fmtPct(total ? t.count * 100 / total : 0)}</span></li>`).join("");
+  }
+
+  function integerAxis(max) {
+    return { beginAtZero: true, grid: { color: GRID }, border: { display: false },
+             ticks: { color: TICK, font: { size: 11 }, precision: 0, stepSize: max <= 6 ? 1 : undefined, padding: 6 } };
+  }
+
+  function activityChart(labels, data) {
+    const canvas = $("chartActivity");
+    destroyChart(canvas);
+    const max = Math.max(1, ...data);
+    canvas._chart = new Chart(canvas, {
+      type: "line",
+      data: { labels, datasets: [{
+        data, borderColor: "#17b4ff", borderWidth: 3, tension: 0, pointRadius: 5, pointHoverRadius: 6,
+        pointBackgroundColor: "#17b4ff", pointBorderColor: "#071037", pointBorderWidth: 2, fill: true,
+        backgroundColor: (ctx) => {
+          const { chart } = ctx; const a = chart.chartArea; if (!a) return "rgba(23,180,255,.2)";
+          const g = chart.ctx.createLinearGradient(0, a.top, 0, a.bottom);
+          g.addColorStop(0, "rgba(23,160,255,.38)"); g.addColorStop(1, "rgba(23,160,255,.02)"); return g;
+        } }] },
+      options: { responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
+        plugins: { legend: { display: false }, tooltip: { backgroundColor: "#0b1444", borderColor: "#1c244b", borderWidth: 1, padding: 10 } },
+        scales: { x: { grid: { color: GRID }, border: { display: false }, ticks: { color: TICK, font: { size: 11 }, padding: 8 } },
+                  y: integerAxis(max) } },
+    });
+  }
+
+  function hourlyChart(rows) {
+    const counts = Array.from({ length: 24 }, (_, h) => (rows.find((r) => Number(r.hour) === h) || {}).count || 0);
+    const canvas = $("chartHourly");
+    destroyChart(canvas);
+    canvas._chart = new Chart(canvas, {
+      type: "bar",
+      data: { labels: counts.map((_, h) => h + "h"), datasets: [{ data: counts, backgroundColor: "#0fd8d6", borderRadius: 1, barPercentage: .72, categoryPercentage: .95 }] },
+      options: { responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { backgroundColor: "#0b1444", borderColor: "#1c244b", borderWidth: 1 } },
+        scales: { x: { grid: { color: GRID }, border: { display: false }, ticks: { color: TICK, font: { size: 11 }, autoSkip: false, maxRotation: 0,
+                    callback: (v, i) => (i % 4 === 0 ? i + "h" : "") } },
+                  y: integerAxis(Math.max(1, ...counts)) } },
+    });
+    return counts;
+  }
+
+  function peakWindow(counts) {
+    if (!counts.some((c) => c > 0)) return "—";
+    let best = 0, bestSum = -1;
+    for (let h = 0; h < 24; h++) {
+      const sum = counts[h] + counts[(h + 1) % 24];
+      if (sum > bestSum) { bestSum = sum; best = h; }
+    }
+    return `${hr12(best)} – ${hr12(best + 2)}`;
+  }
+
+  const FUNNEL_ICONS = ["users", "sparkles", "map-pin", "search", "briefcase"];
+  const FUNNEL_CLASS = ["fb-blue", "fb-green", "fb-amber", "fb-purple", "fb-pink"];
+  function funnelHtml(steps) {
+    const base = steps[0] ? steps[0].value : 0;
+    return steps.map((s, i) => {
+      const pct = base ? Math.round(s.value * 100 / base) : 0;
+      const label = esc(s.label).replace(" ", "<br>");
+      return `<div class="fn-box ${FUNNEL_CLASS[i % 5]}">
+          <span class="fi">${ICON(FUNNEL_ICONS[i % 5])}</span><div class="fl">${label}</div><div class="fv">${fmt(s.value)}</div><div class="fp">${pct}%</div></div>` +
+        (i < steps.length - 1 ? `<div class="fn-arrow a${i}">${ICON("arrow-right")}</div>` : "");
+    }).join("");
+  }
+
+  async function load() {
+    const n = days();
+    const { start, end } = rangeDates(n);
+    const tq = (m) => fetchJSON(`/api/data/trend?metric=${m}&start=${start}&end=${end}`).catch(() => null);
+    const [overview, daily, hourly, jobs, features, funnel, resume, quiz, perf, system, tUsers, tMsgs, tJobs] = await Promise.all([
+      fetchJSON("/api/data/overview"),
+      fetchJSON(`/api/data/daily?start=${start}&end=${end}`),
+      fetchJSON(`/api/data/hourly?start=${start}&end=${end}`),
+      fetchJSON("/api/data/jobs"),
+      fetchJSON(`/api/data/features?start=${start}&end=${end}`),
+      fetchJSON("/api/data/funnel"),
+      fetchJSON("/api/data/resume"),
+      fetchJSON("/api/data/quiz"),
+      fetchJSON("/api/data/performance"),
+      fetchJSON("/api/data/system").catch(() => null),
+      tq("total_users"), tq("messages"), tq("job_searches"),
+    ]);
+    const vs = `vs. last ${n} days`;
+
+    /* KPI cards */
+    $("kTotalUsers").textContent = fmt(overview.total_users);
+    $("kMessages").textContent = fmt(overview.messages_processed);
+    $("kJobs").textContent = fmt(jobs.searches);
+    $("kSuccess").textContent = perf.success_rate != null ? Math.round(perf.success_rate) + "%" : "—";
+    delta($("kTotalUsersDelta"), tUsers, vs);
+    delta($("kMessagesDelta"), tMsgs, vs);
+    delta($("kJobsDelta"), tJobs, vs);
+    $("kSuccessDelta").innerHTML = `<span class="dot ok"></span><span class="vs">${fmt(perf.failed_messages)} failed</span>`;
+
+    /* activity line */
+    activityChart(daily.data.map((d) => shortDate(d.date)), daily.data.map((d) => d.users));
+
+    /* job search donut + legend (top 5 + Other) */
+    const topics = (jobs.popular_topics || []).map((t) => ({ topic: t.topic, count: t.count }));
+    if (jobs.other_count > 0) topics.push({ topic: "Other", count: jobs.other_count });
+    const jobTotal = jobs.searches || topics.reduce((a, b) => a + b.count, 0);
+    $("jobDonutTotal").textContent = fmt(jobTotal);
+    const dcanvas = $("chartJobDonut");
+    destroyChart(dcanvas);
+    dcanvas._chart = new Chart(dcanvas, {
+      type: "doughnut",
+      data: { labels: topics.map((t) => t.topic), datasets: [{ data: topics.length ? topics.map((t) => t.count) : [1],
+        backgroundColor: topics.length ? topics.map((_, i) => DONUT_COLORS[i % DONUT_COLORS.length]) : ["#18214f"],
+        borderColor: "#071037", borderWidth: 3 }] },
+      options: { responsive: true, maintainAspectRatio: false, cutout: "50%", plugins: { legend: { display: false }, tooltip: { enabled: topics.length > 0 } } },
+    });
+    $("jobDonutLegend").innerHTML = topics.length ? legendHtml(topics, jobTotal) : '<li class="d-none-yet">No job searches yet</li>';
+
+    /* top 5 domains */
+    const top5 = (jobs.popular_topics || []).slice(0, 5);
+    const maxD = Math.max(1, ...top5.map((t) => t.count));
+    $("topDomains").innerHTML = top5.map((t, i) => `
+      <div class="d-bar-row"><span class="n">${esc(t.topic)}</span>
+      <span class="track"><i style="width:${Math.max(8, t.count * 100 / maxD)}%; background:${DOMAIN_COLORS[i % 5]}"></i></span>
+      <span class="c">${fmt(t.count)}</span></div>`).join("") || '<div class="d-none-yet">No searches yet</div>';
+
+    /* hourly + peak time */
+    const counts = hourlyChart(hourly.data || []);
+    const peak = peakWindow(counts);
+
+    /* most used features */
+    const most = (features.most_used || []).slice(0, 5);
+    const maxF = Math.max(1, ...most.map((m) => m.count));
+    const FEAT_CLASS = ["f1", "f2", "f3", "f4", "f5"];
+    $("mostUsed").innerHTML = most.map((m, i) => `
+      <div class="d-feat"><span class="badge ${FEAT_CLASS[i]}">${i + 1}</span>
+      <div class="fb"><div class="top"><span class="n">${esc(m.command)}</span><span class="c">${fmt(m.count)}</span></div>
+      <div class="track"><i class="${FEAT_CLASS[i]}" style="width:${Math.max(6, m.count * 100 / maxF)}%"></i></div></div></div>`).join("") ||
+      '<div class="d-none-yet">No usage yet</div>';
+
+    /* funnel (rendered in both funnel panels, as in the design) */
+    document.querySelectorAll("[data-funnel]").forEach((el) => { el.innerHTML = funnelHtml(funnel.steps || []); });
+
+    /* quick stats + second stats block */
+    const users = overview.total_users || 0;
+    const avg = users ? (jobs.searches / users) : 0;
+    const avgTxt = avg ? avg.toFixed(1) : "0";
+    $("qAvgSearches").textContent = avgTxt;
+    const badge = $("qBadge");
+    if (tJobs && tJobs.delta_pct != null) {
+      badge.hidden = false;
+      badge.className = "d-badge " + (tJobs.direction === "down" ? "down" : "up");
+      badge.textContent = (tJobs.direction === "down" ? "↓ " : "↑ ") + Math.abs(Math.round(tJobs.delta_pct)) + "%";
+    } else { badge.hidden = true; }
+    $("qPeakTime").textContent = peak;
+    $("qPeriod").textContent = `Last ${n} Days`;
+    $("bAvg").textContent = tJobs && tJobs.delta_pct != null ? (tJobs.direction === "down" ? "↓" : "↑") + Math.abs(Math.round(tJobs.delta_pct)) + "%" : avgTxt;
+    $("bPeak").textContent = peak;
+    $("bPeriod").textContent = `Last ${n} Days`;
+
+    /* resume & ATS */
+    $("rResumes").textContent = fmt(resume.resumes_uploaded);
+    $("rAnalyses").textContent = fmt(resume.ats_analyses);
+    $("rRt").textContent = fmt(resume.avg_response_ms || 0);
+    const dist = resume.score_distribution || {};
+    const dKeys = ["0-40", "41-60", "61-80", "81-100"];
+    const dVals = dKeys.map((k) => dist[k] || 0);
+    const hasAts = dVals.some((v) => v > 0);
+    $("atsEmpty").hidden = hasAts;
+    $("atsChartBox").hidden = !hasAts;
+    if (hasAts) {
+      const c = $("chartAts"); destroyChart(c);
+      c._chart = new Chart(c, { type: "bar",
+        data: { labels: dKeys.map((k) => k + "%"), datasets: [{ data: dVals, backgroundColor: ["#ff4f98", "#ffa94d", "#2f7bff", "#1de08f"], borderRadius: 4, maxBarThickness: 30 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+          scales: { x: { grid: { display: false }, ticks: { color: TICK, font: { size: 10 } } }, y: integerAxis(Math.max(1, ...dVals)) } } });
+    }
+
+    /* quiz */
+    $("qzStarted").textContent = fmt(quiz.quizzes_started);
+    $("qzCompleted").textContent = fmt(quiz.quizzes_completed);
+    $("qzQuestions").textContent = fmt(quiz.questions_answered);
+    $("qzAvg").textContent = quiz.average_score_pct != null ? quiz.average_score_pct + "%" : "0%";
+    const qt = quiz.popular_topics || [];
+    const qc = $("chartQuiz");
+    destroyChart(qc);
+    if (qt.length) {
+      qc.hidden = false; $("quizRing").hidden = true;
+      qc._chart = new Chart(qc, { type: "doughnut",
+        data: { labels: qt.map((t) => t.topic), datasets: [{ data: qt.map((t) => t.count), backgroundColor: qt.map((_, i) => DONUT_COLORS[i % 6]), borderColor: "#071037", borderWidth: 2 }] },
+        options: { responsive: true, maintainAspectRatio: false, cutout: "58%", plugins: { legend: { display: false } } } });
+      const qTotal = qt.reduce((a, b) => a + b.count, 0);
+      $("quizSide").innerHTML = `<ul class="d-legend-list tight">${legendHtml(qt.map((t) => ({ topic: t.topic, count: t.count })), qTotal)}</ul>`;
+    } else {
+      qc.hidden = true; $("quizRing").hidden = false;
+      $("quizSide").innerHTML = '<div class="d-quiz-empty"><b>No quiz data yet</b><span>Start taking quizzes to see insights here.</span></div>';
+    }
+
+    /* bot performance */
+    $("pReceived").textContent = fmt(perf.messages_received);
+    $("pProcessed").textContent = fmt(perf.messages_processed);
+    $("pFailed").textContent = fmt(perf.failed_messages);
+    $("pRate").textContent = perf.success_rate != null ? Math.round(perf.success_rate) + "%" : "0%";
+
+    /* system health chips + recent log table */
+    const svcMap = [["WhatsApp API", "WhatsApp Webhook"], ["FastAPI Backend", "Bot API (FastAPI)"], ["Database", "Database (SQLite)"], ["AI Service", "AI Service"]];
+    const svcs = (system && system.services) || [];
+    $("healthChipRow").innerHTML = svcMap.map(([label, key]) => {
+      const sv = svcs.find((x) => x.name === key);
+      const st = sv ? sv.status : "Unknown";
+      const cls = st === "Healthy" ? "ok" : st === "Idle" ? "idle" : "bad";
+      return `<div class="d-hchip"><span class="hd ${cls}"></span><div><div class="hn">${esc(label)}</div><div class="hs ${cls}"><i class="hd ${cls}"></i>${esc(st)}</div></div></div>`;
+    }).join("");
+    const logs = ((system && system.recent_logs) || []).slice(0, 3);
+    $("errBody").innerHTML = logs.length ? logs.map((l) => {
+      const type = l.level === "WARNING" ? "Warning" : l.level === "ERROR" ? "Error" : "Info";
+      const ok = l.success !== false;
+      return `<tr><td>${esc((l.time || "").slice(0, 16))}</td><td>${type}</td><td>${esc(l.message)}</td>
+        <td class="ta-c"><span class="d-pill ${ok ? "ok" : "bad"}">${ok ? "Success" : "Failed"}</span></td></tr>`;
+    }).join("") : '<tr><td colspan="4" class="d-none-yet">No recent activity</td></tr>';
+  }
+
+  document.addEventListener("rangechange", load);
+  load().catch((e) => console.error(e));
+  setInterval(() => load().catch(() => {}), 60000);
+}
+</script>
+{% endblock %}

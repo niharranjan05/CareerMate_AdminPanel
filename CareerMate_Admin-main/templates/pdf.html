@@ -1,0 +1,186 @@
+{% extends "shell.html" %}
+{% block title %}Chat with PDF Analytics — CareerMate Admin{% endblock %}
+{% block sidebar_sub %}Analytics Panel{% endblock %}
+{% block page_icon_wrap %}<div class="yn-ic pdf"><i class="fa-regular fa-file-lines"></i></div>{% endblock %}
+{% block page_title %}Chat with PDF <span class="t-cyan">Analytics</span>{% endblock %}
+{% block page_subtitle %}Track usage of PDF chat feature, document sessions, questions and more.{% endblock %}
+{% block page_actions %}
+<label class="pg-search wide"><svg class="ic"><use href="#i-search"/></svg><input id="pdSearch" type="text" placeholder="Search by user, document, question, subject..."></label>
+<button class="pg-btn grn" id="pdExport"><svg class="ic"><use href="#i-download"/></svg> Export Report</button>
+{% endblock %}
+
+{% block content %}
+<style>
+.yn-ic.pdf{background:#3a6df0;width:42px;height:42px;border-radius:10px;font-size:20px}
+.pd-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
+.pd-r3{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1.1fr)}
+.pd-r4{grid-template-columns:minmax(0,2fr) minmax(0,1.1fr);align-items:start}
+.pd-r3 .d-panel,.pd-r4 .d-panel{min-width:0;overflow:hidden}
+.pd-hb{display:grid;gap:13px;margin-top:6px}
+.pd-hb .row{display:grid;grid-template-columns:128px 1fr 48px;gap:10px;align-items:center;font-size:.8rem}
+.pd-hb .bar{height:13px;border-radius:7px;background:#121a45;overflow:hidden}.pd-hb .bar i{display:block;height:100%;border-radius:7px}
+.pd-hb .v{text-align:right;color:var(--ink-dim)}
+.pd-docs{display:grid;gap:3px}
+.pd-doc{display:grid;grid-template-columns:22px 34px 1fr auto;gap:10px;align-items:center;padding:7px 2px;font-size:.82rem}
+.pd-doc .ic2{width:30px;height:30px;border-radius:7px;display:grid;place-items:center;font-size:14px;color:#fff}
+.pd-doc .nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pd-doc .sn{color:var(--ink);white-space:nowrap}
+.pd-act{display:grid;gap:7px}
+.pd-act .row{display:grid;grid-template-columns:30px 1fr auto auto;gap:10px;align-items:center;font-size:.82rem;padding:3px 0}
+.pd-act .ic2{width:28px;height:28px;border-radius:7px;display:grid;place-items:center;color:#fff;font-size:13px}
+.pd-act .n{font-weight:700;text-align:right;min-width:56px}.pd-act .p{color:var(--ink-dim);min-width:72px}
+.pd-foot{display:flex;gap:8px;font-size:.7rem;color:var(--ink-dim);margin-top:10px;align-items:flex-start}
+.pd-resp{margin-top:8px;display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--panel2);font-size:.78rem}
+.pd-resp i.fa-clock{font-size:1.3rem;color:var(--ink-dim)}.pd-resp b{display:block;font-size:1.1rem}.pd-resp .r{margin-left:auto;text-align:right;font-size:.72rem;color:var(--ink-dim)}
+.pd-recent td:nth-child(2),.pd-recent td:last-child{white-space:nowrap}
+.pd-recent .yn-title{max-width:120px}
+.pd-recent .d-table{font-size:.74rem}.pd-recent .d-table th,.pd-recent .d-table td{padding:8px 6px}
+.pd-recent .u-who{gap:6px}.pd-recent .u-who .av{width:24px;height:24px;font-size:.68rem}
+@media(max-width:1250px){.pd-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.pd-r3,.pd-r4{grid-template-columns:1fr}}
+@media(max-width:600px){.pd-kpis{grid-template-columns:1fr}}
+</style>
+<div class="yn-grid">
+  <section class="yn-grid pd-kpis">
+    <div class="yn-kpi b"><span class="i"><i class="fa-regular fa-file-lines"></i></span><div><label>Total PDF Sessions</label><b id="kSess">0</b><div class="dl" id="dSess"></div></div></div>
+    <div class="yn-kpi g"><span class="i"><i class="fa-solid fa-user-group"></i></span><div><label>Unique Users</label><b id="kUsers">0</b><div class="dl" id="dUsers"></div></div></div>
+    <div class="yn-kpi p"><span class="i"><i class="fa-solid fa-question"></i></span><div><label>Total Questions Asked</label><b id="kQ">0</b><div class="dl" id="dQ"></div></div></div>
+    <div class="yn-kpi g"><span class="i"><i class="fa-solid fa-check"></i></span><div><label>Successfully Processing Rate</label><b id="kRate">0%</b><div class="dl" id="dRate"></div></div></div>
+  </section>
+
+  <section class="yn-grid yn-r2">
+    <div class="d-panel">
+      <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-trending-up"/></svg></div><h3>PDF Usage Trend</h3>
+        <div class="yn-key"><span style="--c:#15c3ff">Sessions</span><span style="--c:#1de08f">Questions</span><span style="--c:#ff4f98">Failed</span></div></div>
+      <div class="yn-chart"><canvas id="cTrend"></canvas></div>
+    </div>
+    <div class="d-panel">
+      <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-chart-pie"/></svg></div><h3>Processing Status</h3></div>
+      <div class="yn-donutrow"><div class="yn-donut" style="width:140px;height:140px"><canvas id="cStatus"></canvas><div class="c"><b id="stTotal">0</b><span>Total Sessions</span></div></div><ul class="yn-leg" id="stLeg"></ul></div>
+    </div>
+    <div class="d-panel">
+      <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-user"/></svg></div><h3>Questions Per Session</h3></div>
+      <div class="yn-chart" style="height:160px"><canvas id="cQps"></canvas></div>
+      <div class="pd-resp"><i class="fa-regular fa-clock"></i><div>Avg. Response Time<b id="avgResp">0s</b></div><div class="r" id="avgRespD"></div></div>
+    </div>
+  </section>
+
+  <section class="yn-grid pd-r3">
+    <div class="d-panel">
+      <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-file-text"/></svg></div><h3>Document Type Breakdown</h3></div>
+      <div class="yn-donutrow"><div class="yn-donut" style="width:132px;height:132px"><canvas id="cDocs"></canvas><div class="c"><b id="dcTotal">0</b><span>Sessions</span></div></div><ul class="yn-leg" id="dcLeg"></ul></div>
+    </div>
+    <div class="d-panel">
+      <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-layers"/></svg></div><h3>Top Subjects / Categories</h3></div>
+      <div class="pd-hb" id="subjBars"></div>
+    </div>
+    <div class="d-panel">
+      <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-file-text"/></svg></div><h3>Popular PDF Documents</h3><a class="fa-va" href="#" id="pdAllDocs">View All <svg class="ic"><use href="#i-arrow-right"/></svg></a></div>
+      <div class="pd-docs" id="popDocs"></div>
+    </div>
+  </section>
+
+  <section class="yn-grid pd-r4">
+    <div class="d-panel">
+      <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-users"/></svg></div><h3>Recent Activity</h3><a class="fa-va" href="#" id="pdAll">View All <svg class="ic"><use href="#i-arrow-right"/></svg></a></div>
+      <div class="d-table-wrap pd-recent"><table class="d-table js-table"><thead><tr><th>#</th><th>User</th><th>Phone Number</th><th>Document Name</th><th>Questions Asked</th><th>Status</th><th>Timestamp</th></tr></thead><tbody id="tRecent"></tbody></table></div>
+    </div>
+    <div class="d-panel">
+      <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-chart-column"/></svg></div><h3>Popular Actions</h3></div>
+      <div class="pd-act" id="actions"></div>
+      <div class="pd-foot"><i class="fa-regular fa-circle-question"></i><span id="actNote"></span></div>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function init_pdf() {
+  const $ = (id) => document.getElementById(id);
+  const state = { days: Number(sessionStorage.getItem("cm_range") || 30), search: "", all: false, allDocs: false };
+  const COL = ["#15c3ff", "#a66cff", "#1de08f", "#ffcf3f", "#ff4f98"];
+  const STC = { successful: "#1de08f", failed: "#ff4f98", interrupted: "#ffcf3f" };
+  const ACT = { upload: ["#3a6df0", "fa-solid fa-file-arrow-up"], ask: ["#2f9bff", "fa-regular fa-comments"], summary: ["#e0a21f", "fa-regular fa-file-lines"], done: ["#8a5cf0", "fa-solid fa-circle-check"] };
+  const DOCC = ["#3a6df0", "#e0a21f", "#7a4cf0"];
+  let data = null;
+  const mk = (id, cfg) => { const c = $(id); destroyChart(c); c._chart = new Chart(c, cfg); };
+  const local = (s) => new Date(String(s).replace(" ", "T") + "Z");
+  const dt = (s) => { const d = local(s); return d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) + ", " + d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }); };
+  const sd = (s) => local(s + " 12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const secs = (v) => (v == null ? "—" : Number(v).toFixed(1) + "s");
+  const match = (...p) => !state.search || p.join(" ").toLowerCase().includes(state.search);
+
+  function delta(el, d, vs, goodDown, points) {
+    if (d == null) { el.innerHTML = `<span class="vs">${vs}</span>`; return; }
+    const up = d >= 0, good = goodDown ? !up : up;
+    el.innerHTML = `<span class="${good ? "up" : "down"}"><i class="fa-solid fa-arrow-${up ? "up" : "down"}"></i> ${up ? "+" : "-"}${Math.abs(d)}${points ? "" : "%"}</span><span class="vs">${vs}</span>`;
+  }
+  const labelPlugin = { id: "barLabels", afterDatasetsDraw(ch) {
+    const { ctx } = ch; ctx.save(); ctx.fillStyle = "#e6ebff"; ctx.font = "600 11px Ubuntu, sans-serif"; ctx.textAlign = "center";
+    ch.getDatasetMeta(0).data.forEach((b, i) => ctx.fillText(ch.data.datasets[0].data[i], b.x, b.y - 5)); ctx.restore(); } };
+  const donut = (id, items, colors, cut) => mk(id, { type: "doughnut", options: { responsive: true, maintainAspectRatio: false, cutout: cut || "68%", plugins: { legend: { display: false } } },
+    data: { labels: items.map((i) => i.name), datasets: [{ data: items.length ? items.map((i) => i.count) : [1], backgroundColor: items.length ? colors : ["#18214f"], borderColor: "#071037", borderWidth: 2 }] } });
+  const legend = (el, items, colors) => { el.innerHTML = items.map((i, k) => `<li><span class="dot" style="background:${colors[k]}"></span><span class="n">${esc(i.name)}</span><span class="p">${fmtPct(i.pct)}</span></li>`).join("") || '<li class="yn-empty">No data yet</li>'; };
+
+  function renderLists() {
+    const docs = data.popular.filter((d) => match(d.name)).slice(0, state.allDocs ? 20 : 5);
+    $("popDocs").innerHTML = docs.map((d, i) => `<div class="pd-doc"><span>${i + 1}</span><span class="ic2" style="background:${DOCC[i % 3]}"><i class="fa-regular fa-file-lines"></i></span><span class="nm" title="${esc(d.name)}">${esc(d.name)}</span><span class="sn">${fmt(d.sessions)} session${d.sessions === 1 ? "" : "s"}</span></div>`).join("") || '<div class="yn-empty">No documents yet.</div>';
+    const rec = data.recent.filter((r) => match(r.user, r.phone, r.file, r.status));
+    const rows = state.all || state.search ? rec : rec.slice(0, 5);
+    $("tRecent").innerHTML = rows.map((r, i) => `<tr><td>${i + 1}</td><td><span class="u-who"><span class="av sm round" style="background:#4d93ff">${esc(r.user.slice(-1))}</span><a href="/users/${encodeURIComponent(r.phone)}">${esc(r.user)}</a></span></td>
+      <td>${esc(r.phone)}</td><td><div class="yn-title" title="${esc(r.file)}">${esc(r.file)}</div></td><td>${fmt(r.questions)}</td>
+      <td><span class="yn-st ${r.status === "successful" ? "ok" : r.status === "failed" ? "bad" : ""}" ${r.status === "interrupted" ? 'style="background:rgba(255,207,63,.2);color:#ffcf3f"' : ""} title="${esc(r.error)}">${r.status === "successful" ? "Success" : r.status === "failed" ? "Failed" : "Interrupted"}</span></td><td>${esc(dt(r.time))}</td></tr>`).join("") ||
+      '<tr><td colspan="7" class="yn-empty">No /chat_pdf sessions in this period.</td></tr>';
+  }
+
+  function render() {
+    const k = data.kpis, vs = `vs. last ${data.days} days`;
+    $("kSess").textContent = fmt(k.sessions.value); $("kUsers").textContent = fmt(k.users.value); $("kQ").textContent = fmt(k.questions.value); $("kRate").textContent = fmtPct(k.rate.value);
+    delta($("dSess"), k.sessions.delta, vs); delta($("dUsers"), k.users.delta, vs); delta($("dQ"), k.questions.delta, vs); delta($("dRate"), k.rate.delta, vs, false, true);
+    if (k.rate.delta != null) $("dRate").firstChild.insertAdjacentText("beforeend", "%");
+
+    const t = data.trend, line = (label, d, c, fill) => ({ label, data: d, borderColor: c, backgroundColor: c + "22", tension: 0.25, pointRadius: 2, borderWidth: 2, fill });
+    mk("cTrend", { type: "line", data: { labels: t.labels.map(sd), datasets: [line("Sessions", t.sessions, "#15c3ff", false), line("Questions", t.questions, "#1de08f", true), line("Failed", t.failed, "#ff4f98", false)] },
+      options: { responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false }, plugins: { legend: { display: false } },
+        scales: { x: { ticks: { color: "#a3afe0", maxTicksLimit: 9 }, grid: { color: "#121a45" } }, y: { beginAtZero: true, ticks: { color: "#a3afe0", precision: 0 }, grid: { color: "#1c244b" } } } } });
+
+    $("stTotal").textContent = fmt(k.sessions.value);
+    donut("cStatus", data.status, data.status.map((s) => STC[s.key]), "74%"); legend($("stLeg"), data.status, data.status.map((s) => STC[s.key]));
+
+    mk("cQps", { type: "bar", plugins: [labelPlugin], data: { labels: data.questions_per_session.map((x) => [x.label, x.label === "1" ? "question" : "questions"]), datasets: [{ data: data.questions_per_session.map((x) => x.count), backgroundColor: "#2f9bff", borderRadius: 4, maxBarThickness: 30 }] },
+      options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 16 } }, plugins: { legend: { display: false } },
+        scales: { x: { ticks: { color: "#cfd6f7", font: { size: 10 } }, grid: { display: false } }, y: { beginAtZero: true, ticks: { color: "#a3afe0", precision: 0, maxTicksLimit: 5 }, grid: { color: "#1c244b" } } } } });
+    $("avgResp").textContent = secs(data.avg_response.value);
+    const ad = data.avg_response.delta;
+    $("avgRespD").innerHTML = ad == null ? vs : `<span class="${ad <= 0 ? "up" : "down"}"><i class="fa-solid fa-arrow-${ad <= 0 ? "down" : "up"}"></i> ${ad > 0 ? "+" : "-"}${Math.abs(ad)}%</span><br>${vs}`;
+
+    $("dcTotal").textContent = fmt(k.sessions.value);
+    donut("cDocs", data.doc_types, data.doc_types.map((_, i) => COL[i % 5]), "62%"); legend($("dcLeg"), data.doc_types, data.doc_types.map((_, i) => COL[i % 5]));
+    const mx = Math.max(1, ...data.subjects.map((s) => s.pct));
+    $("subjBars").innerHTML = data.subjects.map((s, i) => `<div class="row"><span>${esc(s.name)}</span><span class="bar"><i style="width:${Math.max(4, s.pct / mx * 100)}%;background:${COL[i % 5]}"></i></span><span class="v">${fmtPct(s.pct)}</span></div>`).join("") || '<div class="yn-empty">No data yet</div>';
+
+    $("actions").innerHTML = data.actions.map((a) => `<div class="row"><span class="ic2" style="background:${ACT[a.key][0]}"><i class="${ACT[a.key][1]}"></i></span><span>${esc(a.label)}</span><span class="n">${fmt(a.count)}</span><span class="p">(${fmtPct(a.pct)})${a.pct > 100 ? '<span style="color:var(--pink)">*</span>' : ""}</span></div>`).join("");
+    $("actNote").textContent = (data.actions.some((a) => a.pct > 100) ? "* " : "") + data.note;
+    renderLists();
+  }
+
+  async function load() {
+    const { start, end } = rangeDates(state.days);
+    data = await fetchJSON(`/api/data/learning/chat-pdf?start=${start}&end=${end}`);
+    render();
+  }
+
+  const q = (v) => '"' + String(v ?? "").replace(/"/g, '""') + '"';
+  $("pdExport").addEventListener("click", () => {
+    if (!data || !data.recent.length) return toast("No activity to export in this period.", true);
+    const rows = [["time_utc", "user", "phone", "document", "questions", "status", "note"]].concat(data.recent.map((r) => [r.time, r.user, r.phone, r.file, r.questions, r.status, r.error]));
+    const blob = new Blob(["﻿" + rows.map((r) => r.map(q).join(",")).join("\n")], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `chat_pdf_${data.start}_to_${data.end}.csv`; a.click(); URL.revokeObjectURL(a.href);
+  });
+  $("pdSearch").addEventListener("input", (e) => { state.search = e.target.value.trim().toLowerCase(); if (data) renderLists(); });
+  $("pdAll").addEventListener("click", (e) => { e.preventDefault(); state.all = true; if (data) renderLists(); });
+  $("pdAllDocs").addEventListener("click", (e) => { e.preventDefault(); state.allDocs = true; if (data) renderLists(); });
+  document.addEventListener("rangechange", (e) => { state.days = Number(e.detail.days); load(); });
+  load();
+}
+</script>
+{% endblock %}

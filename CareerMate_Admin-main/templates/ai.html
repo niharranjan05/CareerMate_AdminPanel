@@ -1,0 +1,80 @@
+{% extends "shell.html" %}
+{% block title %}AI Providers — CareerMate Admin{% endblock %}
+{% block sidebar_sub %}Analytics Panel{% endblock %}
+{% block page_icon_wrap %}<div class="yn-ic ai"><i class="fa-solid fa-plug-circle-bolt"></i></div>{% endblock %}
+{% block page_title %}AI <span class="t-cyan">Providers</span>{% endblock %}
+{% block page_subtitle %}Which AI provider and model is working right now, which is failing, and why (used by /chat_pdf).{% endblock %}
+{% block page_actions %}
+<button class="pg-btn grn" id="aiTest"><svg class="ic"><use href="#i-refresh-cw"/></svg> Test all now</button>
+{% endblock %}
+
+{% block content %}
+<style>
+.yn-ic.ai{background:#17b978;width:46px;height:46px;border-radius:11px;font-size:20px}
+.ai-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
+.ai-grid .d-panel{min-width:0;overflow:hidden}
+.ai-t{width:100%;border-collapse:collapse;font-size:.78rem}
+.ai-t th{text-align:left;color:var(--ink-dim);font-weight:500;padding:8px 6px;border-bottom:1px solid var(--border)}
+.ai-t td{padding:9px 6px;border-bottom:1px solid var(--border);vertical-align:top}
+.ai-t .m{font-family:ui-monospace,monospace;font-size:.72rem;color:#cfd6f7;word-break:break-all}
+.ai-t .err{color:var(--pink);font-size:.72rem;max-width:300px;word-break:break-word}
+.yn-st.mute{background:#1a2250;color:#9fb0e6}.yn-st.warn{background:rgba(255,207,63,.2);color:#ffcf3f}
+.ai-note{font-size:.76rem;color:var(--ink-dim);margin:0 0 10px}
+.ai-wrap{overflow-x:auto}
+@media(max-width:1000px){.ai-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+<div class="yn-grid ai-grid">
+  <section class="yn-grid ai-kpis">
+    <div class="yn-kpi b"><span class="i"><i class="fa-solid fa-plug"></i></span><div><label>Providers Configured</label><b id="kCfg">0</b><div class="dl"><span class="vs" id="kOrder"></span></div></div></div>
+    <div class="yn-kpi g"><span class="i"><i class="fa-solid fa-circle-check"></i></span><div><label>Working Now</label><b id="kWork">0</b><div class="dl"><span class="vs">models / providers</span></div></div></div>
+    <div class="yn-kpi r"><span class="i"><i class="fa-solid fa-circle-xmark"></i></span><div><label>Failing / Cooling</label><b id="kFail">0</b><div class="dl"><span class="vs">skipped for a while</span></div></div></div>
+    <div class="yn-kpi p"><span class="i"><i class="fa-solid fa-bullseye"></i></span><div><label>Success Rate</label><b id="kSucc">0%</b><div class="dl"><span class="vs" id="kCalls"></span></div></div></div>
+  </section>
+  <section class="d-panel"><div class="d-head"><h3>Answer models (LLM) — in the order they are tried</h3></div>
+    <p class="ai-note" id="llmNote"></p><div class="ai-wrap"><table class="ai-t"><thead><tr><th>#</th><th>Provider</th><th>Model</th><th>Status</th><th>Calls</th><th>Success</th><th>Avg ms</th><th>Last OK</th><th>Last failure</th></tr></thead><tbody id="tLlm"></tbody></table></div></section>
+  <section class="d-panel"><div class="d-head"><h3>Embedding providers (PDF search)</h3></div>
+    <p class="ai-note" id="embNote"></p><div class="ai-wrap"><table class="ai-t"><thead><tr><th>#</th><th>Provider</th><th>Status</th><th>Calls</th><th>Success</th><th>Avg ms</th><th>Last OK</th><th>Last failure</th></tr></thead><tbody id="tEmb"></tbody></table></div></section>
+  <section class="d-panel"><div class="d-head"><h3>Recent errors</h3></div>
+    <div class="ai-wrap"><table class="ai-t"><thead><tr><th>Time</th><th>Type</th><th>Provider / model</th><th>Error</th></tr></thead><tbody id="tErr"></tbody></table></div></section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function init_ai() {
+  const $ = (id) => document.getElementById(id);
+  const ST = { working: ["ok", "Working"], failing: ["bad", "Failing"], cooling: ["warn", "Cooling down"], degraded: ["warn", "Unstable"], unused: ["mute", "Not used yet"] };
+  const state = { days: Number(sessionStorage.getItem("cm_range") || 7) };
+  const local = (s) => new Date(String(s).replace(" ", "T") + "Z");
+  const dt = (s) => s ? local(s).toLocaleDateString("en-US", { month: "short", day: "numeric" }) + ", " + local(s).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }) : "—";
+  const row = (p, i, showModel) => `<tr><td>${i + 1}</td><td>${esc(p.provider)}</td>${showModel ? `<td class="m">${esc(p.model)}</td>` : ""}
+    <td><span class="yn-st ${ST[p.status][0]}">${ST[p.status][1]}${p.cooldown_s ? " " + p.cooldown_s + "s" : ""}</span></td><td>${fmt(p.calls)}</td><td>${p.success == null ? "—" : fmtPct(p.success)}</td>
+    <td>${p.avg_ms == null ? "—" : p.avg_ms}</td><td>${esc(dt(p.last_ok))}</td><td>${p.last_fail ? esc(dt(p.last_fail)) + `<div class="err">${esc(p.last_error)}</div>` : "—"}</td></tr>`;
+  async function load() {
+    const { start, end } = rangeDates(state.days);
+    const d = await fetchJSON(`/api/data/learning/ai-providers?start=${start}&end=${end}`);
+    const k = d.kpis;
+    $("kCfg").textContent = k.configured; $("kWork").textContent = k.working; $("kFail").textContent = k.failing; $("kSucc").textContent = fmtPct(k.success);
+    $("kCalls").textContent = fmt(k.calls) + " calls"; $("kOrder").textContent = "order: " + (d.llm_order || "").replace(/,/g, " → ");
+    const llm = d.providers.filter((p) => p.kind === "llm"), emb = d.providers.filter((p) => p.kind === "embed");
+    $("tLlm").innerHTML = llm.map((p, i) => row(p, i, true)).join("") || '<tr><td colspan="9" class="yn-empty">No AI provider key is configured.</td></tr>';
+    $("tEmb").innerHTML = emb.map((p, i) => row(p, i, false)).join("") || '<tr><td colspan="8" class="yn-empty">No embedding provider (keyword search is used).</td></tr>';
+    $("llmNote").textContent = d.not_configured.length ? "No key set for: " + d.not_configured.join(", ") + " (skipped)." : "All listed providers have a key.";
+    $("embNote").textContent = "Order: " + (d.embed_order || "").replace(/,/g, " → ");
+    $("tErr").innerHTML = d.recent_errors.map((r) => `<tr><td>${esc(dt(r.time))}</td><td>${esc(r.kind)}</td><td class="m">${esc(r.provider)}${r.kind === "llm" ? " / " + esc(r.model) : ""}</td><td class="err">${esc(r.error || "—")}</td></tr>`).join("") || '<tr><td colspan="4" class="yn-empty">No errors in this period.</td></tr>';
+  }
+  $("aiTest").addEventListener("click", async () => {
+    const b = $("aiTest"); b.disabled = true; toast("Testing every configured provider...");
+    try {
+      const r = await fetch("/api/data/learning/ai-providers/test", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: "{}" });
+      if (r.status === 401) { window.location.href = "/login"; return; }
+      const j = await r.json(); const res = j.results || [];
+      toast(`${res.filter((x) => x.ok).length}/${res.length} providers answered.`, res.some((x) => !x.ok));
+      await load();
+    } catch (e) { toast("Test failed: " + e.message, true); } finally { b.disabled = false; }
+  });
+  document.addEventListener("rangechange", (e) => { state.days = Number(e.detail.days); load(); });
+  load();
+}
+</script>
+{% endblock %}

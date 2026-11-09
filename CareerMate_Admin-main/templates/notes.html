@@ -1,0 +1,172 @@
+{% extends "shell.html" %}
+{% block title %}YouTube Notes Analytics — CareerMate Admin{% endblock %}
+{% block sidebar_sub %}Analytics Panel{% endblock %}
+{% block page_icon_wrap %}<div class="yn-ic"><i class="fa-solid fa-play"></i></div>{% endblock %}
+{% block page_title %}YouTube Notes <span class="t-cyan">Analytics</span>{% endblock %}
+{% block page_subtitle %}Track usage of /utube_notes, popular subjects and note generation performance.{% endblock %}
+{% block page_actions %}
+<label class="pg-search wide"><svg class="ic"><use href="#i-search"/></svg><input id="ynSearch" type="text" placeholder="Search by user, video title, subject..."></label>
+<button class="pg-btn grn" id="ynExport"><svg class="ic"><use href="#i-download"/></svg> Export Report</button>
+{% endblock %}
+
+{% block content %}
+<div class="yn-grid">
+  <section class="yn-grid yn-kpis">
+    <div class="yn-kpi b"><span class="i"><i class="fa-regular fa-file-lines"></i></span><div><label>Total Note Requests</label><b id="kTotal">0</b><div class="dl" id="dTotal"></div></div></div>
+    <div class="yn-kpi g"><span class="i"><i class="fa-solid fa-user-group"></i></span><div><label>Unique Users</label><b id="kUsers">0</b><div class="dl" id="dUsers"></div></div></div>
+    <div class="yn-kpi p"><span class="i"><i class="fa-solid fa-check"></i></span><div><label>Successfully Generated</label><b id="kOk">0</b><div class="dl" id="dOk"></div></div></div>
+    <div class="yn-kpi r"><span class="i"><i class="fa-solid fa-xmark"></i></span><div><label>Failed Requests</label><b id="kFail">0</b><div class="dl" id="dFail"></div></div></div>
+    <div class="yn-kpi v"><span class="i"><i class="fa-regular fa-clock"></i></span><div><label>Avg. Processing Time</label><b id="kAvg">0s</b><div class="dl" id="dAvg"></div></div></div>
+  </section>
+
+  <section class="yn-grid yn-r2">
+    <div class="d-panel">
+      <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-trending-up"/></svg></div><h3>Note Requests Trend</h3>
+        <div class="yn-key"><span style="--c:#15c3ff">Total Requests</span><span style="--c:#1de08f">Successful</span><span style="--c:#ff4f98">Failed</span></div></div>
+      <div class="yn-chart"><canvas id="cTrend"></canvas></div>
+    </div>
+    <div class="d-panel">
+      <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-graduation-cap"/></svg></div><h3>Popular Subjects</h3></div>
+      <div class="yn-donutrow"><div class="yn-donut"><canvas id="cSubj"></canvas><div class="c"><b id="sTotal">0</b><span>Total Requests</span></div></div><ul class="yn-leg" id="sLeg"></ul></div>
+    </div>
+    <div class="d-panel">
+      <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-clock"/></svg></div><h3>Video Length Category</h3></div>
+      <div class="yn-chart" style="height:165px"><canvas id="cLen"></canvas></div>
+      <div class="yn-callout" id="lenNote" hidden><i class="fa-solid fa-trophy"></i><span id="lenText"></span></div>
+    </div>
+  </section>
+
+  <section class="yn-grid yn-r3">
+    <div class="yn-col">
+      <div class="d-panel">
+        <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-timer"/></svg></div><h3>Generation Performance</h3></div>
+        <div class="yn-gauges">
+          <div class="yn-gauge"><div class="ring"><canvas id="gOk"></canvas><div class="c" id="tOk">0%</div></div><small>Success Rate</small></div>
+          <div class="yn-gauge"><div class="ring"><canvas id="gAvg"></canvas><div class="c" id="tAvg">0s</div></div><small>Avg. Processing Time</small></div>
+          <div class="yn-gauge"><div class="ring"><canvas id="gFail"></canvas><div class="c" id="tFail">0%</div></div><small>Failure Rate</small></div>
+          <div class="yn-gauge"><div class="ring"><canvas id="gMax"></canvas><div class="c" id="tMax">0s</div></div><small>Max Processing Time</small></div>
+        </div>
+      </div>
+      <div class="d-panel">
+        <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-users"/></svg></div><h3>Recent Activity</h3><a class="fa-va" href="#" id="ynAll">View All <svg class="ic"><use href="#i-arrow-right"/></svg></a></div>
+        <div class="d-table-wrap yn-recent"><table class="d-table js-table"><thead><tr><th>#</th><th>User</th><th>Phone Number</th><th>Video Title</th><th>Subject</th><th>Status</th><th>Timestamp</th></tr></thead><tbody id="tRecent"></tbody></table></div>
+      </div>
+    </div>
+    <div class="yn-col">
+      <div class="d-panel">
+        <div class="d-head"><div class="d-head-ic bare" style="color:#ff1f3d"><i class="fa-brands fa-youtube"></i></div><h3>Top 5 Most Used Videos</h3><a class="fa-va" href="#" id="ynAllV">View All <svg class="ic"><use href="#i-arrow-right"/></svg></a></div>
+        <div class="d-table-wrap"><table class="d-table js-table"><thead><tr><th>#</th><th>Video</th><th>Title</th><th>Subject</th><th>Requests</th></tr></thead><tbody id="tTop"></tbody></table></div>
+      </div>
+      <div class="d-panel">
+        <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-refresh-cw"/></svg></div><h3>Repeated Videos</h3></div>
+        <div class="d-table-wrap"><table class="d-table js-table"><thead><tr><th>#</th><th>Video Title</th><th>User Count</th><th>Repeat Count</th><th>% of Total</th></tr></thead><tbody id="tRep"></tbody></table></div>
+      </div>
+      <div class="d-panel">
+        <div class="d-head"><div class="d-head-ic bare gold"><svg class="ic"><use href="#i-lightbulb"/></svg></div><h3>Key Insights</h3></div>
+        <div class="yn-ins" id="insights"></div>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function init_notes() {
+  const $ = (id) => document.getElementById(id);
+  const state = { days: Number(sessionStorage.getItem("cm_range") || 30), search: "", all: false, allV: false };
+  const SUBC = ["#15c3ff", "#1de08f", "#ffcf3f", "#a66cff", "#ff4f98"];
+  const TAG = { "Python": "#2f7bff", "Data Science": "#17b978", "Machine Learning": "#7a4cf0", "Web Development": "#7a4cf0", "Java": "#2f7bff", "Others": "#4a54c9" };
+  const subCol = (s) => TAG[s] || "#4a54c9";
+  let data = null;
+  const mk = (id, cfg) => { const c = $(id); destroyChart(c); c._chart = new Chart(c, cfg); };
+  const local = (s) => new Date(String(s).replace(" ", "T") + "Z");
+  const dt = (s) => { const d = local(s); return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) + " " + d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }); };
+  const dtShort = (s) => { const d = local(s); return d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) + ", " + d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }); };
+  const sd = (s) => local(s + " 12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const secs = (v) => (v == null ? "—" : Number(v).toFixed(1) + "s");
+  const match = (...p) => !state.search || p.join(" ").toLowerCase().includes(state.search);
+  const thumb = (v) => v ? `<img class="yn-thumb" loading="lazy" referrerpolicy="no-referrer" src="https://i.ytimg.com/vi/${encodeURIComponent(v)}/default.jpg" alt="" onerror="this.style.visibility='hidden'">` : '<span class="yn-thumb"></span>';
+
+  function delta(el, d, vs, goodDown) {
+    if (d == null) { el.innerHTML = `<span class="vs">${vs}</span>`; return; }
+    const up = d >= 0, good = goodDown ? !up : up;
+    el.innerHTML = `<span class="${good ? "up" : "down"}"><i class="fa-solid fa-arrow-${up ? "up" : "down"}"></i> ${up ? "+" : "-"}${Math.abs(d)}%</span><span class="vs">${vs}</span>`;
+  }
+
+  const ring = (id, pct, color) => mk(id, { type: "doughnut", options: { responsive: true, maintainAspectRatio: false, cutout: "78%", events: [], plugins: { legend: { display: false }, tooltip: { enabled: false } } },
+    data: { datasets: [{ data: [Math.max(0, Math.min(100, pct)), 100 - Math.max(0, Math.min(100, pct))], backgroundColor: [color, "#18214f"], borderWidth: 0 }] } });
+
+  const labelPlugin = { id: "barLabels", afterDatasetsDraw(ch) {
+    const { ctx } = ch; ctx.save(); ctx.fillStyle = "#e6ebff"; ctx.font = "600 11px Ubuntu, sans-serif"; ctx.textAlign = "center";
+    ch.getDatasetMeta(0).data.forEach((b, i) => ctx.fillText(ch.data.datasets[0].data[i], b.x, b.y - 5)); ctx.restore(); } };
+
+  function renderTables() {
+    const rec = data.recent.filter((r) => match(r.user, r.phone, r.title, r.subject));
+    const rows = state.all || state.search ? rec : rec.slice(0, 5);
+    $("tRecent").innerHTML = rows.map((r, i) => `<tr><td>${i + 1}</td><td><span class="u-who"><span class="av sm round" style="background:#4d93ff">${esc(r.user.slice(-1))}</span><a href="/users/${encodeURIComponent(r.phone)}">${esc(r.user)}</a></span></td>
+      <td>${esc(r.phone)}</td><td><div class="yn-title" title="${esc(r.title)}">${esc(r.title)}</div></td><td>${esc(r.subject)}</td>
+      <td><span class="yn-st ${r.ok ? "ok" : "bad"}" title="${esc(r.error)}">${r.ok ? "Success" : "Failed"}</span></td><td>${esc(dtShort(r.time))}</td></tr>`).join("") ||
+      '<tr><td colspan="7" class="yn-empty">No /utube_notes activity in this period.</td></tr>';
+    const tops = data.top_videos.filter((v) => match(v.title, v.subject)).slice(0, state.allV ? 20 : 5);
+    $("tTop").innerHTML = tops.map((v, i) => `<tr><td>${i + 1}</td><td>${thumb(v.video)}</td><td><div class="yn-title" title="${esc(v.title)}">${esc(v.title)}</div></td>
+      <td><span class="yn-sub" style="background:${subCol(v.subject)}">${esc(v.subject)}</span></td><td>${fmt(v.requests)}</td></tr>`).join("") || '<tr><td colspan="5" class="yn-empty">No videos yet.</td></tr>';
+    $("tRep").innerHTML = data.repeated.filter((v) => match(v.title)).map((v, i) => `<tr><td>${i + 1}</td><td><div class="yn-title" title="${esc(v.title)}">${esc(v.title)}</div></td><td>${fmt(v.users)}</td><td>${fmt(v.requests)}</td><td>${fmtPct(v.pct)}</td></tr>`).join("") ||
+      '<tr><td colspan="5" class="yn-empty">No video was requested more than once.</td></tr>';
+  }
+
+  function render() {
+    const k = data.kpis, vs = `vs. last ${data.days} days`;
+    $("kTotal").textContent = fmt(k.total.value); $("kUsers").textContent = fmt(k.users.value); $("kOk").textContent = fmt(k.success.value);
+    $("kFail").textContent = fmt(k.failed.value); $("kAvg").textContent = secs(k.avg_secs.value);
+    delta($("dTotal"), k.total.delta, vs); delta($("dUsers"), k.users.delta, vs); delta($("dOk"), k.success.delta, vs);
+    delta($("dFail"), k.failed.delta, vs, true); delta($("dAvg"), k.avg_secs.delta, vs, true);
+
+    const t = data.trend, line = (label, d, c, fill) => ({ label, data: d, borderColor: c, backgroundColor: c + "22", tension: 0.25, pointRadius: 2, borderWidth: 2, fill });
+    mk("cTrend", { type: "line", data: { labels: t.labels.map(sd), datasets: [line("Total Requests", t.total, "#15c3ff", false), line("Successful", t.success, "#1de08f", true), line("Failed", t.failed, "#ff4f98", false)] },
+      options: { responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false }, plugins: { legend: { display: false } },
+        scales: { x: { ticks: { color: "#a3afe0", maxTicksLimit: 9 }, grid: { color: "#121a45" } }, y: { beginAtZero: true, ticks: { color: "#a3afe0", precision: 0 }, grid: { color: "#1c244b" } } } } });
+
+    const sj = data.subjects; $("sTotal").textContent = fmt(k.total.value);
+    mk("cSubj", { type: "doughnut", options: { responsive: true, maintainAspectRatio: false, cutout: "62%", plugins: { legend: { display: false } } },
+      data: { labels: sj.map((s) => s.name), datasets: [{ data: sj.length ? sj.map((s) => s.count) : [1], backgroundColor: sj.length ? sj.map((_, i) => SUBC[i % 5]) : ["#18214f"], borderColor: "#071037", borderWidth: 2 }] } });
+    $("sLeg").innerHTML = sj.map((s, i) => `<li><span class="dot" style="background:${SUBC[i % 5]}"></span><span class="n">${esc(s.name)}</span><span class="p">${fmtPct(s.pct)}</span></li>`).join("") || '<li class="yn-empty">No data yet</li>';
+
+    mk("cLen", { type: "bar", plugins: [labelPlugin], data: { labels: data.lengths.map((x) => x.label.replace(" min", "\nmin").replace(" hr", "\nhr").split("\n")), datasets: [{ data: data.lengths.map((x) => x.count), backgroundColor: "#2f9bff", borderRadius: 4, maxBarThickness: 26 }] },
+      options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 16 } }, plugins: { legend: { display: false }, tooltip: { enabled: true } },
+        scales: { x: { ticks: { color: "#cfd6f7", font: { size: 10 } }, grid: { display: false } }, y: { beginAtZero: true, ticks: { color: "#a3afe0", precision: 0, maxTicksLimit: 5 }, grid: { color: "#1c244b" } } } } });
+    $("lenNote").hidden = !data.best_length;
+    if (data.best_length) $("lenText").innerHTML = `Most requests come from <b>${esc(data.best_length)}</b> videos<br>(${fmtPct(data.best_length_pct)} of total requests)`;
+
+    const p = data.performance, maxS = Math.max(10, p.max_secs);
+    ring("gOk", p.success_rate, "#1de08f"); ring("gAvg", p.avg_secs / maxS * 100, "#2f7bff"); ring("gFail", p.failure_rate, "#ff4f98"); ring("gMax", p.max_secs / maxS * 100, "#a66cff");
+    $("tOk").textContent = fmtPct(p.success_rate); $("tAvg").textContent = secs(p.avg_secs); $("tFail").textContent = fmtPct(p.failure_rate); $("tMax").textContent = secs(p.max_secs);
+
+    const ins = data.insights.slice();
+    if (data.peak_hour_utc != null) { const h = new Date(); h.setUTCHours(data.peak_hour_utc, 0, 0, 0); const f = (d) => d.toLocaleTimeString("en-US", { hour: "numeric" }); ins.push(`Peak usage time: ${f(h)} – ${f(new Date(h.getTime() + 3600000))} (your local time).`); }
+    $("insights").className = "yn-ins" + (ins.length < 3 ? " one" : "");
+    $("insights").innerHTML = ins.map((x) => `<div><i class="fa-regular fa-clock"></i><span>${esc(x)}</span></div>`).join("") || '<div class="yn-empty">Insights appear once there is activity.</div>';
+    renderTables();
+  }
+
+  async function load() {
+    const { start, end } = rangeDates(state.days);
+    data = await fetchJSON(`/api/data/learning/notes?start=${start}&end=${end}`);
+    render();
+  }
+
+  const q = (v) => '"' + String(v ?? "").replace(/"/g, '""') + '"';
+  $("ynExport").addEventListener("click", () => {
+    if (!data || !data.recent.length) return toast("No activity to export in this period.", true);
+    const rows = [["time_utc", "user", "phone", "video_id", "title", "subject", "status", "error"]].concat(data.recent.map((r) => [r.time, r.user, r.phone, r.video, r.title, r.subject, r.ok ? "success" : "failed", r.error]));
+    const blob = new Blob(["﻿" + rows.map((r) => r.map(q).join(",")).join("\n")], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `youtube_notes_${data.start}_to_${data.end}.csv`; a.click(); URL.revokeObjectURL(a.href);
+  });
+  $("ynSearch").addEventListener("input", (e) => { state.search = e.target.value.trim().toLowerCase(); if (data) renderTables(); });
+  $("ynAll").addEventListener("click", (e) => { e.preventDefault(); state.all = true; if (data) renderTables(); });
+  $("ynAllV").addEventListener("click", (e) => { e.preventDefault(); state.allV = true; if (data) renderTables(); });
+  document.addEventListener("rangechange", (e) => { state.days = Number(e.detail.days); load(); });
+  load();
+}
+</script>
+{% endblock %}

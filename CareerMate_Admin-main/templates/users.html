@@ -1,0 +1,205 @@
+{% extends "shell.html" %}
+{% block title %}Users — CareerMate Admin{% endblock %}
+{% block page_icon_wrap %}<div class="pg-ic"><svg class="ic"><use href="#i-users"/></svg></div>{% endblock %}
+{% block page_title %}Users Management{% endblock %}
+{% block page_subtitle %}View and manage all users of your WhatsApp bot.{% endblock %}
+{% block page_actions %}
+<label class="pg-search"><svg class="ic"><use href="#i-search"/></svg><input id="userSearch" type="text" placeholder="Search by phone or name..."></label>
+<button class="pg-btn" id="exportBtn"><svg class="ic"><use href="#i-download"/></svg> Export</button>
+{% endblock %}
+
+{% block content %}
+<div class="dash">
+<section class="d-kpis">
+  <article class="d-kpi k-blue"><div class="d-kpi-ic"><svg class="ic"><use href="#i-users"/></svg></div>
+    <div><div class="d-kpi-label">Total Users</div><div class="d-kpi-value" id="uTotal">—</div><div class="d-kpi-delta" id="uTotalD"></div></div></article>
+  <article class="d-kpi k-green"><div class="d-kpi-ic"><svg class="ic"><use href="#i-user-plus"/></svg></div>
+    <div><div class="d-kpi-label">New Users</div><div class="d-kpi-value" id="uNew">—</div><div class="d-kpi-delta" id="uNewD"></div></div></article>
+  <article class="d-kpi k-purple"><div class="d-kpi-ic"><svg class="ic"><use href="#i-rotate-cw"/></svg></div>
+    <div><div class="d-kpi-label">Returning Users</div><div class="d-kpi-value" id="uReturning">—</div><div class="d-kpi-delta" id="uReturningD"></div></div></article>
+  <article class="d-kpi k-amber"><div class="d-kpi-ic"><svg class="ic"><use href="#i-message-circle"/></svg></div>
+    <div><div class="d-kpi-label">Active Users</div><div class="d-kpi-value" id="uActive">—</div><div class="d-kpi-delta" id="uActiveD"></div></div></article>
+</section>
+
+<section class="d-row r-eq">
+  <div class="d-panel">
+    <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-chart-column"/></svg></div><h3>User Growth</h3>
+      <div class="d-legend"><span class="dot" style="background:#17b4ff"></span>Total Users <span class="dot" style="background:#1de08f;margin-left:10px"></span>New Users</div></div>
+    <div class="d-chart tall"><canvas id="chartGrowth"></canvas></div>
+  </div>
+  <div class="d-panel">
+    <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-chart-column"/></svg></div><h3>User Activity</h3>
+      <div class="d-legend"><span class="dot" style="background:#2f7bff"></span>Active Users <span class="dot" style="background:#1de08f;margin-left:10px"></span>New Users</div></div>
+    <div class="d-chart tall"><canvas id="chartActivity"></canvas></div>
+  </div>
+</section>
+
+<section class="d-row r-src">
+  <div class="d-panel">
+    <div class="d-head"><div class="d-head-ic bare violet"><svg class="ic"><use href="#i-users"/></svg></div><h3>User Source / Registration</h3></div>
+    <div class="d-donut-row">
+      <div class="d-donut"><canvas id="chartSource"></canvas><div class="d-donut-center"><b id="srcTotal">0</b><span>Total Users</span></div></div>
+      <ul class="d-legend-list" id="srcLegend"></ul>
+    </div>
+  </div>
+  <div class="d-panel">
+    <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-activity"/></svg></div><h3>User Activity Stats</h3></div>
+    <div class="u-stats">
+      <div class="u-stat"><span class="ti t-blue"><svg class="ic"><use href="#i-message-square"/></svg></span><div><b id="asMessages">—</b><span>Total Messages</span></div></div>
+      <div class="u-stat"><span class="ti t-green"><svg class="ic"><use href="#i-chart-column"/></svg></span><div><b id="asAvgMsg">—</b><span>Avg. Messages/User</span></div></div>
+      <div class="u-stat"><span class="ti t-purple"><svg class="ic"><use href="#i-message-circle"/></svg></span><div><b id="asSessions">—</b><span>Active Sessions</span></div></div>
+      <div class="u-stat"><span class="ti t-amber"><svg class="ic"><use href="#i-clock"/></svg></span><div><b id="asRecent">—</b><span>Avg. Recent Activity</span></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="d-panel">
+  <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-users"/></svg></div><h3>Recent Users</h3><span class="d-pageinfo" id="pageInfo"></span>
+    <div class="d-pager"><button id="prevPage" aria-label="Previous"><svg class="ic"><use href="#i-chevron-left"/></svg></button><button id="nextPage" aria-label="Next"><svg class="ic"><use href="#i-chevron-right"/></svg></button></div></div>
+  <div class="d-table-wrap">
+    <table class="d-table u-table">
+      <thead><tr><th>#</th><th>Name / Phone</th><th>Joined On</th><th>Last Active</th><th>Total Messages</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody id="usersBody"></tbody>
+    </table>
+  </div>
+</section>
+
+<section class="d-row r-eng">
+  <div class="d-panel">
+    <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-chart-column"/></svg></div><h3>User Engagement</h3>
+      <div class="d-legend"><span class="dot" style="background:#2f7bff"></span>Messages <span class="dot" style="background:#1de08f;margin-left:10px"></span>Commands Used</div></div>
+    <div class="d-chart tall"><canvas id="chartEngagement"></canvas></div>
+  </div>
+  <div class="d-panel">
+    <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-users"/></svg></div><h3>Popular Commands (by Users)</h3></div>
+    <div id="popularCmds"></div>
+  </div>
+</section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function init_users() {
+  const state = { days: Number(sessionStorage.getItem("cm_range") || 7), offset: 0, limit: 10, search: "" };
+
+  const GRID = "rgba(90,115,210,.16)", TICK = "#9ea5cf";
+  const shortDate = (iso) => new Date(iso + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const weekday = (iso) => new Date(iso + "T00:00:00").toLocaleDateString("en-US", { weekday: "short" });
+  const ICON = (n) => `<svg class="ic"><use href="#i-${n}"/></svg>`;
+  const scales = (max, stacked) => ({
+    x: { grid: { color: GRID }, border: { display: false }, ticks: { color: TICK, font: { size: 11 }, padding: 8 } },
+    y: { beginAtZero: true, grid: { color: GRID }, border: { display: false }, ticks: { color: TICK, font: { size: 11 }, precision: 0, stepSize: max <= 6 ? 1 : undefined, padding: 6 } },
+  });
+  const baseOpts = (max) => ({ responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
+    plugins: { legend: { display: false }, tooltip: { backgroundColor: "#0b1444", borderColor: "#1c244b", borderWidth: 1, padding: 10 } }, scales: scales(max) });
+  function area(color) {
+    return (ctx) => { const a = ctx.chart.chartArea; if (!a) return "transparent";
+      const g = ctx.chart.ctx.createLinearGradient(0, a.top, 0, a.bottom);
+      g.addColorStop(0, "rgba(23,160,255,.35)"); g.addColorStop(1, "rgba(23,160,255,.02)"); return g; };
+  }
+  function mk(id, cfg) { const c = document.getElementById(id); destroyChart(c); c._chart = new Chart(c, cfg); }
+
+  async function loadTop() {
+    const { start, end } = rangeDates(state.days);
+    const tq = (m) => fetchJSON(`/api/data/trend?metric=${m}&start=${start}&end=${end}`).catch(() => null);
+    const [tTot, tNew, tRet, tAct] = await Promise.all([tq("total_users"), tq("new_users"), tq("returning_users"), tq("active_users")]);
+    [["uTotalD", tTot], ["uNewD", tNew], ["uReturningD", tRet], ["uActiveD", tAct]].forEach(([id, t]) => {
+      const el = document.getElementById(id), vs = `<span class="vs">vs. last ${state.days} days</span>`;
+      if (!t || t.delta_pct == null) { el.innerHTML = vs; return; }
+      const d = Math.abs(t.delta_pct);
+      if (t.direction === "flat" || d === 0) { el.innerHTML = `<span class="flat">0%</span>${vs}`; return; }
+      const dir = t.direction === "down" ? "down" : "up";
+      el.innerHTML = `<span class="${dir}">${ICON("arrow-" + dir)} ${d}%</span>${vs}`;
+    });
+    const [summary, series, source, stats] = await Promise.all([
+      fetchJSON(`/api/data/users/summary?start=${start}&end=${end}`),
+      fetchJSON(`/api/data/users/timeseries?start=${start}&end=${end}`),
+      fetchJSON("/api/data/users/source"),
+      fetchJSON("/api/data/users/activity-stats"),
+    ]);
+
+    document.getElementById("uTotal").textContent = fmt(summary.total_users);
+    document.getElementById("uNew").textContent = fmt(summary.new_users);
+    document.getElementById("uReturning").textContent = fmt(summary.returning_users);
+    document.getElementById("uActive").textContent = fmt(summary.active_users_7d);
+
+    const rows = series.data;
+    const gMax = Math.max(1, ...rows.map((d) => d.total_users));
+    mk("chartGrowth", { type: "line", options: baseOpts(gMax), data: { labels: rows.map((d) => shortDate(d.date)), datasets: [
+      { data: rows.map((d) => d.total_users), borderColor: "#17b4ff", borderWidth: 3, tension: .35, pointRadius: 4, pointBackgroundColor: "#17b4ff", pointBorderColor: "#071037", pointBorderWidth: 2, fill: true, backgroundColor: area() },
+      { data: rows.map((d) => d.new_users), borderColor: "#1de08f", borderWidth: 2, tension: .35, pointRadius: 0, fill: false } ] } });
+    const wk = rows.length <= 7;
+    const aMax = Math.max(1, ...rows.map((d) => Math.max(d.active_users, d.new_users)));
+    mk("chartActivity", { type: "bar", options: baseOpts(aMax), data: { labels: rows.map((d) => (wk ? weekday(d.date) : shortDate(d.date))), datasets: [
+      { data: rows.map((d) => d.active_users), backgroundColor: "#2f7bff", barPercentage: .8, categoryPercentage: .7 },
+      { data: rows.map((d) => d.new_users), backgroundColor: "#1de08f", barPercentage: .8, categoryPercentage: .7 } ] } });
+
+    const SRC = ["#17b4ff", "#a66cff", "#8b93b8"];
+    document.getElementById("srcTotal").textContent = fmt(source.total_users);
+    mk("chartSource", { type: "doughnut", options: { responsive: true, maintainAspectRatio: false, cutout: "58%", plugins: { legend: { display: false } } },
+      data: { labels: source.sources.map((s) => s.label), datasets: [{ data: source.sources.some((s) => s.count) ? source.sources.map((s) => s.count) : [1],
+        backgroundColor: source.sources.some((s) => s.count) ? SRC : ["#18214f"], borderColor: "#071037", borderWidth: 2 }] } });
+    document.getElementById("srcLegend").innerHTML = source.sources.map((s, i) => `
+      <li><span class="dot" style="background:${SRC[i % 3]}"></span><span class="n">${esc(s.label)}</span>
+      <span class="p2">${fmtPct(s.pct)}</span><span class="p">(${fmt(s.count)})</span></li>`).join("");
+
+    document.getElementById("asMessages").textContent = fmt(stats.total_messages);
+    document.getElementById("asAvgMsg").textContent = fmt(stats.avg_messages_per_user);
+    document.getElementById("asSessions").textContent = fmt(stats.active_sessions);
+    document.getElementById("asRecent").textContent = stats.avg_recent_activity_days != null ? stats.avg_recent_activity_days + " days" : "—";
+
+    const eng = (await fetchJSON("/api/data/users/engagement?limit=8")).data;
+    const eMax = Math.max(1, ...eng.map((u) => Math.max(u.messages, u.commands)));
+    mk("chartEngagement", { type: "bar", options: baseOpts(eMax), data: { labels: eng.map((u) => u.label), datasets: [
+      { data: eng.map((u) => u.messages), backgroundColor: "#2f7bff", barPercentage: .8, categoryPercentage: .5 },
+      { data: eng.map((u) => u.commands), backgroundColor: "#1de08f", barPercentage: .8, categoryPercentage: .5 } ] } });
+
+    const cmds = (await fetchJSON("/api/data/users/commands?limit=5")).data;
+    const maxC = Math.max(1, ...cmds.map((c) => c.users));
+    const CC = ["#2f7bff", "#1de08f", "#ffcf3f", "#a66cff", "#ff4f98"];
+    document.getElementById("popularCmds").innerHTML = cmds.map((c, i) => `
+      <div class="u-cmd"><span class="badge" style="background:${CC[i % 5]}">${i + 1}</span>
+      <span class="n">${esc(c.command)}</span><span class="c">${fmt(c.users)}</span>
+      <span class="track"><i style="width:${Math.max(8, c.users * 100 / maxC)}%;background:${CC[i % 5]}"></i></span>
+      <span class="p">${fmtPct(c.pct)}</span></div>`).join("") || '<div class="d-none-yet">No commands used yet</div>';
+  }
+
+  async function loadTable() {
+    const data = await fetchJSON(`/api/data/users/list?limit=${state.limit}&offset=${state.offset}&search=${encodeURIComponent(state.search)}`);
+    const tbody = document.getElementById("usersBody");
+    const AV = ["#2f7bff", "#8d5cf0", "#13c9a0", "#e8b324", "#ff4f98"];
+    tbody.innerHTML = data.users.length ? data.users.map((u) => `
+      <tr class="u-row" data-href="/users/${encodeURIComponent(u.phone)}">
+        <td>${u.index}</td>
+        <td><div class="u-who"><span class="av" style="background:${AV[(u.index - 1) % 5]}">${esc(u.label.slice(0, 1))}</span>
+          <div><b>${esc(u.label)}</b><small>${esc(u.phone)}</small></div></div></td>
+        <td>${esc(fmtDate(u.joined_on))}</td>
+        <td><span class="u-last"><i class="dot"></i>${esc(fmtDateTime(u.last_active))}</span></td>
+        <td>${fmt(u.total_messages)}</td>
+        <td><span class="d-pill ok">${esc(u.status)}</span></td>
+        <td><span class="u-acts"><a class="u-act eye" href="/users/${encodeURIComponent(u.phone)}" title="View">${ICON("eye")}</a><a class="u-act" href="/users/${encodeURIComponent(u.phone)}" title="More">${ICON("ellipsis-vertical")}</a></span></td>
+      </tr>`).join("") : '<tr><td colspan="7" class="d-none-yet" style="text-align:center">No users found</td></tr>';
+    tbody.querySelectorAll("tr.u-row").forEach((tr) => tr.addEventListener("click", (e) => { if (!e.target.closest("a")) window.location.href = tr.dataset.href; }));
+    const from = data.total ? state.offset + 1 : 0;
+    const to = Math.min(state.offset + state.limit, data.total);
+    document.getElementById("pageInfo").textContent = `${from}–${to} of ${data.total}`;
+    document.getElementById("prevPage").disabled = state.offset === 0;
+    document.getElementById("nextPage").disabled = to >= data.total;
+  }
+
+  document.getElementById("userSearch").addEventListener("input", (e) => {
+    state.search = e.target.value.trim();
+    state.offset = 0;
+    loadTable();
+  });
+  document.getElementById("prevPage").addEventListener("click", () => { state.offset = Math.max(0, state.offset - state.limit); loadTable(); });
+  document.getElementById("nextPage").addEventListener("click", () => { state.offset += state.limit; loadTable(); });
+  document.getElementById("exportBtn").addEventListener("click", () => toast("Export isn't wired up yet — coming soon."));
+  document.addEventListener("rangechange", (e) => { state.days = Number(e.detail.days); loadTop(); });
+
+  loadTop();
+  loadTable();
+}
+</script>
+{% endblock %}

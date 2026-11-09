@@ -1,0 +1,170 @@
+{% extends "shell.html" %}
+{% block title %}Feature Analytics — CareerMate Admin{% endblock %}
+{% block page_icon_wrap %}<div class="pg-ic"><svg class="ic"><use href="#i-chart-column"/></svg></div>{% endblock %}
+{% block page_title %}Feature Analytics{% endblock %}
+{% block page_subtitle %}Track feature usage, popularity and performance.{% endblock %}
+{% block page_actions %}
+<label class="pg-search"><svg class="ic"><use href="#i-search"/></svg><input id="featSearch" type="text" placeholder="Search feature..."></label>
+<button class="pg-btn" id="exportBtn"><svg class="ic"><use href="#i-download"/></svg> Export Report</button>
+{% endblock %}
+
+{% block content %}
+<div class="dash fa">
+  <section class="d-kpis">
+    <article class="d-kpi big k-blue"><div class="d-kpi-ic sq"><svg class="ic"><use href="#i-layout-grid"/></svg></div>
+      <div><div class="d-kpi-label">Total Features</div><div class="d-kpi-value" id="fTotal">—</div><div class="d-kpi-delta"><span class="vs">Available commands</span></div></div></article>
+    <article class="d-kpi big k-green"><div class="d-kpi-ic sq"><svg class="ic"><use href="#i-mouse-pointer-click"/></svg></div>
+      <div><div class="d-kpi-label">Total Usage</div><div class="d-kpi-value" id="fUsage">—</div><div class="d-kpi-delta" id="fUsageD"></div></div></article>
+    <article class="d-kpi big k-purple"><div class="d-kpi-ic sq gold"><svg class="ic"><use href="#i-star"/></svg></div>
+      <div><div class="d-kpi-label">Most Used Feature</div><div class="d-kpi-value md" id="fMost">—</div><div class="d-kpi-delta" id="fMostD"></div></div></article>
+    <article class="d-kpi big k-amber"><div class="d-kpi-ic sq amber"><svg class="ic"><use href="#i-clock"/></svg></div>
+      <div><div class="d-kpi-label">Avg. Response Time</div><div class="d-kpi-value" id="fRt">—</div><div class="d-kpi-delta" id="fRtD"></div></div></article>
+  </section>
+
+  <section class="d-row fa-r1">
+    <div class="d-panel">
+      <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-trending-up"/></svg></div><div><h3>Feature Usage Over Time</h3><p>Daily usage of all features</p></div></div>
+      <div class="fa-legend"><span><i style="background:#15c3ff"></i>Job Search</span><span><i style="background:#16e0a8"></i>Quiz</span><span><i style="background:#ffcf3f"></i>Resume &amp; ATS</span><span><i style="background:#a97bff"></i>Others</span></div>
+      <div class="d-chart tall"><canvas id="chartFeatTime"></canvas></div>
+    </div>
+    <div class="d-panel">
+      <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-chart-pie"/></svg></div><h3>Feature Usage Distribution</h3></div>
+      <div class="d-donut-row">
+        <div class="d-donut"><canvas id="chartFeatDonut"></canvas><div class="d-donut-center"><b id="fDonutTotal">0</b><span>Total Uses</span></div></div>
+        <ul class="d-legend-list fa-dl" id="fDonutLegend"></ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="d-row fa-r2">
+    <div class="d-panel">
+      <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-list"/></svg></div><h3>Feature-wise Usage</h3>
+        <button class="pg-btn sm" id="viewAll">View All <svg class="ic"><use href="#i-arrow-right"/></svg></button></div>
+      <div class="d-table-wrap"><table class="d-table fa-table">
+        <thead><tr><th>#</th><th>Feature</th><th>Description</th><th>Total Uses</th><th>% of Total</th><th>Trend</th></tr></thead>
+        <tbody id="featTable"></tbody></table></div>
+    </div>
+    <div class="d-panel">
+      <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-chart-column"/></svg></div><h3>Top 5 Features (Bar Chart)</h3></div>
+      <div class="d-chart tall2"><canvas id="chartTop5"></canvas></div>
+    </div>
+  </section>
+
+  <section class="d-row fa-r3">
+    <div class="d-panel">
+      <div class="d-head"><div class="d-head-ic bare gold"><svg class="ic"><use href="#i-lightbulb"/></svg></div><h3>Key Insights</h3></div>
+      <div class="fa-insights" id="keyInsights"></div>
+    </div>
+    <div class="d-panel">
+      <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-clock"/></svg></div><h3>Recent Feature Activity</h3>
+        <a class="fa-va" href="{{ url_for('users') }}">View All <svg class="ic"><use href="#i-arrow-right"/></svg></a></div>
+      <div id="recentFeat"></div>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function init_features() {
+  const state = { days: Number(sessionStorage.getItem("cm_range") || 7), search: "", showAll: false };
+  const ICON = (n) => `<svg class="ic"><use href="#i-${n}"/></svg>`;
+  const GRID = "rgba(90,115,210,.16)", TICK = "#9ea5cf";
+  const FC = { job_search: "#15c3ff", quiz: "#16e0a8", resume: "#ffcf3f", roadmap: "#a97bff", internships: "#ff5c9d", competitions: "#ffcf3f", news: "#a97bff", other: "#4d93ff" };
+  const FI = { job_search: "search", quiz: "brain", resume: "file-text", roadmap: "route", internships: "briefcase", competitions: "trophy", news: "newspaper", other: "send" };
+  const shortDate = (iso) => new Date(iso + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const fullDT = (iso) => { const d = new Date(String(iso).replace(" ", "T")); return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) + " " + d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }); };
+  const $ = (id) => document.getElementById(id);
+  const mk = (id, cfg) => { const c = $(id); destroyChart(c); c._chart = new Chart(c, cfg); };
+  let rows = [];
+
+  function trendCell(f) {
+    if (f.trend_pct == null) return `<span class="tr flat">${ICON("minus")} 0%</span>`;
+    const up = f.trend === "up", flat = f.trend === "flat";
+    return `<span class="tr ${flat ? "flat" : up ? "up" : "down"}">${ICON(flat ? "minus" : up ? "trending-up" : "trending-down")} ${flat ? "" : up ? "↑" : "↓"}${Math.abs(f.trend_pct)}%</span>`;
+  }
+  function renderTable() {
+    let list = rows.filter((r) => !state.search || (r.label + " " + r.description).toLowerCase().includes(state.search));
+    if (!state.showAll && !state.search) list = list.slice(0, 8);
+    $("featTable").innerHTML = list.length ? list.map((r, i) => `
+      <tr><td>${i + 1}</td>
+      <td><span class="ft"><span class="fi" style="--c:${FC[r.key]}">${ICON(FI[r.key])}</span>${esc(r.label)}</span></td>
+      <td class="dim">${esc(r.description)}</td><td>${fmt(r.count)}</td><td>${fmtPct(r.pct)}</td><td>${trendCell(r)}</td></tr>`).join("") :
+      '<tr><td colspan="6" class="d-none-yet" style="text-align:center">No matching features</td></tr>';
+  }
+
+  async function load() {
+    const { start, end } = rangeDates(state.days);
+    const tq = (m) => fetchJSON(`/api/data/trend?metric=${m}&start=${start}&end=${end}`).catch(() => null);
+    const [det, perf, tRt] = await Promise.all([fetchJSON(`/api/data/features/detail?start=${start}&end=${end}`), fetchJSON("/api/data/performance"), tq("avg_response_ms")]);
+    rows = det.features || [];
+    const total = det.total_usage || 0;
+    const prevTotal = rows.reduce((a, f) => a + (f.trend_pct == null ? 0 : f.count / (1 + f.trend_pct / 100)), 0);
+    const tUse = await tq("feature_usage");
+
+    $("fTotal").textContent = fmt(det.available_commands);
+    $("fUsage").textContent = fmt(total);
+    const top = rows[0];
+    $("fMost").textContent = top && top.count ? top.label : "—";
+    $("fMostD").innerHTML = top && top.count ? `<span class="pctv">${fmtPct(top.pct)}</span><span class="vs"> of total usage</span>` : "";
+    const vs = `vs. last ${state.days} days`;
+    $("fUsageD").innerHTML = tUse && tUse.delta_pct != null
+      ? `<span class="${tUse.direction === "down" ? "down" : "up"}">${ICON(tUse.direction === "down" ? "arrow-down" : "arrow-up")} ${Math.abs(tUse.delta_pct)}%</span><span class="vs">${vs}</span>` : `<span class="vs">${vs}</span>`;
+    const rtMs = tRt && tRt.current != null ? tRt.current : perf.avg_response_time_ms;
+    $("fRt").textContent = rtMs != null ? (rtMs / 1000).toFixed(1) + "s" : "—";
+    $("fRtD").innerHTML = tRt && tRt.delta_pct != null
+      ? `<span class="${tRt.direction === "down" ? "up" : "down"}">${ICON(tRt.direction === "down" ? "arrow-down" : "arrow-up")} ${Math.abs(tRt.delta_pct)}%</span><span class="vs">${vs}</span>` : `<span class="vs">${vs}</span>`;
+
+    /* lines */
+    const s = det.series, ymax = Math.max(1, ...s.job_search, ...s.quiz, ...s.resume, ...s.others);
+    const ds = (key, color) => ({ data: s[key], borderColor: color, borderWidth: 2.5, tension: .25, pointRadius: 4, pointBackgroundColor: color, pointBorderColor: "#071037", pointBorderWidth: 2, fill: key === "job_search",
+      backgroundColor: (ctx) => { const a = ctx.chart.chartArea; if (!a) return "transparent"; const g = ctx.chart.ctx.createLinearGradient(0, a.top, 0, a.bottom); g.addColorStop(0, "rgba(21,195,255,.28)"); g.addColorStop(1, "rgba(21,195,255,0)"); return g; } });
+    mk("chartFeatTime", { type: "line", data: { labels: s.labels.map(shortDate), datasets: [ds("job_search", "#15c3ff"), ds("quiz", "#16e0a8"), ds("resume", "#ffcf3f"), ds("others", "#a97bff")] },
+      options: { responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false }, plugins: { legend: { display: false }, tooltip: { backgroundColor: "#0b1444", borderColor: "#1c244b", borderWidth: 1 } },
+        scales: { x: { grid: { color: GRID }, border: { display: false }, ticks: { color: TICK, font: { size: 11 }, padding: 8, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 } },
+                  y: { beginAtZero: true, grid: { color: GRID }, border: { display: false }, ticks: { color: TICK, font: { size: 11 }, precision: 0, padding: 6 } } } } });
+
+    /* donut: top 4 + Others */
+    const used = rows.filter((r) => r.count > 0);
+    const part = used.slice(0, 4).map((r) => ({ label: r.label, count: r.count, color: FC[r.key] }));
+    const restSum = used.slice(4).reduce((a, r) => a + r.count, 0);
+    if (restSum) part.push({ label: "Others", count: restSum, color: "#ff5c9d" });
+    $("fDonutTotal").textContent = fmt(total);
+    mk("chartFeatDonut", { type: "doughnut", options: { responsive: true, maintainAspectRatio: false, cutout: "52%", plugins: { legend: { display: false } } },
+      data: { labels: part.map((p) => p.label), datasets: [{ data: part.length ? part.map((p) => p.count) : [1], backgroundColor: part.length ? part.map((p) => p.color) : ["#18214f"], borderColor: "#071037", borderWidth: 2 }] } });
+    $("fDonutLegend").innerHTML = part.map((p) => `<li><span class="dot" style="background:${p.color}"></span><span class="n">${esc(p.label)}</span><span class="p">${fmtPct(total ? p.count * 100 / total : 0)}</span></li>`).join("") || '<li class="d-none-yet">No usage yet</li>';
+
+    renderTable();
+
+    /* top 5 bar (value labels above bars) */
+    const t5 = used.slice(0, 5);
+    const labelPlugin = { id: "vals", afterDatasetsDraw(chart) { const { ctx } = chart; ctx.save(); ctx.fillStyle = "#fff"; ctx.font = "500 12px Ubuntu, sans-serif"; ctx.textAlign = "center";
+      chart.getDatasetMeta(0).data.forEach((bar, i) => ctx.fillText(chart.data.datasets[0].data[i], bar.x, bar.y - 6)); ctx.restore(); } };
+    mk("chartTop5", { type: "bar", plugins: [labelPlugin], data: { labels: t5.map((t) => t.label.replace(" & ", " & ")), datasets: [{ data: t5.map((t) => t.count), backgroundColor: t5.map((t) => FC[t.key]), borderRadius: 3, barPercentage: .78, categoryPercentage: .9 }] },
+      options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 18 } }, plugins: { legend: { display: false } },
+        scales: { x: { grid: { display: false }, border: { display: false }, ticks: { color: "#cfd6f6", font: { size: 11 }, maxRotation: 0, callback(v) { const l = this.getLabelForValue(v); return l.length > 9 ? l.split(" ") : l; } } },
+                  y: { beginAtZero: true, grid: { color: GRID }, border: { display: false }, ticks: { color: TICK, precision: 0 } } } } });
+
+    /* insights */
+    const ins = [];
+    if (top && top.count) ins.push({ cls: "i-blue", icon: "search", title: `${top.label} is the top feature`, text: `Used ${fmtPct(top.pct)} of total usage` });
+    if (tUse && tUse.delta_pct != null) ins.push({ cls: "i-green", icon: "trending-up", title: `Usage ${tUse.direction === "down" ? "decreased" : "increased"} by ${Math.abs(tUse.delta_pct)}%`, text: `compared to last ${state.days} days` });
+    if (tRt && tRt.current != null) ins.push({ cls: "i-amber", icon: "clock", title: "Fastest response time", text: `${(tRt.current / 1000).toFixed(1)}s` + (tRt.delta_pct != null ? ` (${Math.abs(tRt.delta_pct)}% ${tRt.direction === "down" ? "better" : "slower"})` : "") });
+    ins.push({ cls: "i-purple", icon: "star", title: "Overall feature usage", text: `${fmt(total)} total interactions` });
+    $("keyInsights").innerHTML = ins.map((i) => `<div class="fa-ins ${i.cls}">${ICON(i.icon)}<div><b>${esc(i.title)}</b><span>${esc(i.text)}</span></div></div>`).join("");
+
+    /* recent */
+    $("recentFeat").innerHTML = (det.recent || []).map((r) => `
+      <div class="fa-rec"><span class="fi" style="--c:${FC[r.feature]}">${ICON(FI[r.feature])}</span>
+      <span class="t">User used <b style="color:${FC[r.feature]}">${esc(r.command)}</b></span><span class="tm">${esc(fullDT(r.timestamp))}</span>
+      <span class="d-pill ${r.success ? "ok" : "bad"}">${r.success ? "Success" : "Failed"}</span></div>`).join("") || '<div class="d-none-yet">No feature activity yet</div>';
+  }
+
+  $("featSearch").addEventListener("input", (e) => { state.search = e.target.value.trim().toLowerCase(); renderTable(); });
+  $("viewAll").addEventListener("click", () => { state.showAll = true; renderTable(); });
+  $("exportBtn").addEventListener("click", () => toast("Export isn't wired up yet — coming soon."));
+  document.addEventListener("rangechange", (e) => { state.days = Number(e.detail.days); load(); });
+  load();
+}
+</script>
+{% endblock %}

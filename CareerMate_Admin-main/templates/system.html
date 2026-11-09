@@ -1,0 +1,143 @@
+{% extends "shell.html" %}
+{% block title %}System Health — CareerMate Admin{% endblock %}
+{% block sidebar_sub %}Analytics Panel{% endblock %}
+{% block page_icon_wrap %}<div class="pg-ic"><svg class="ic"><use href="#i-settings"/></svg></div>{% endblock %}
+{% block page_title %}System Health{% endblock %}
+{% block page_subtitle %}Monitor the health and performance of your CareerMate bot.{% endblock %}
+{% block page_actions %}
+<span class="sh-op" id="opStatus"><svg class="ic"><use href="#i-shield-check"/></svg><span id="opText">All Systems Operational</span></span>
+<button class="pg-btn" id="refreshBtn"><svg class="ic"><use href="#i-refresh-cw"/></svg> Refresh</button>
+{% endblock %}
+
+{% block content %}
+<div class="dash sh">
+  <section class="sh-cards">
+    <div class="sh-card c-green"><span class="sh-ic"><svg class="ic"><use href="#i-server"/></svg></span><div><small>Bot Status</small><b id="hBot">—</b><em id="hBotSub"></em></div><i class="sh-dot" id="dBot"></i></div>
+    <div class="sh-card c-blue"><span class="sh-ic"><svg class="ic"><use href="#i-database"/></svg></span><div><small>Database</small><b id="hDb">—</b><em id="hDbSub"></em></div><i class="sh-dot" id="dDb"></i></div>
+    <div class="sh-card c-purple"><span class="sh-ic"><svg class="ic"><use href="#i-globe"/></svg></span><div><small>Web Server</small><b id="hWeb">—</b><em id="hWebSub"></em></div><i class="sh-dot" id="dWeb"></i></div>
+    <div class="sh-card c-orange"><span class="sh-ic"><svg class="ic"><use href="#i-link"/></svg></span><div><small>WhatsApp API</small><b id="hWa">—</b><em id="hWaSub"></em></div><i class="sh-dot" id="dWa"></i></div>
+  </section>
+
+  <section class="d-row sh-mid">
+    <div class="d-panel">
+      <div class="d-head"><span class="d-head-ic bare"><svg class="ic"><use href="#i-activity"/></svg></span><h3>Service Health</h3></div>
+      <div class="sh-scroll">
+        <table class="sh-tbl"><thead><tr><th>Service</th><th>Status</th><th>Response Time</th><th>Uptime</th></tr></thead><tbody id="serviceBody"></tbody></table>
+      </div>
+      <div class="sh-foot">Uptime = share of successful events over the last 7 days.</div>
+    </div>
+
+    <div class="d-panel">
+      <div class="d-head"><span class="d-head-ic bare"><svg class="ic"><use href="#i-chart-column"/></svg></span><h3>Resource Usage</h3></div>
+      <div class="sh-gauges">
+        <div class="sh-g"><b>CPU</b><div class="gw"><canvas id="gCpu"></canvas><div class="gc"><strong id="gCpuVal">—</strong><small>Used</small></div></div><span id="gCpuSub"></span></div>
+        <div class="sh-g"><b>Memory</b><div class="gw"><canvas id="gMem"></canvas><div class="gc"><strong id="gMemVal">—</strong><small>Used</small></div></div><span id="gMemSub"></span></div>
+        <div class="sh-g"><b>Disk</b><div class="gw"><canvas id="gDisk"></canvas><div class="gc"><strong id="gDiskVal">—</strong><small>Used</small></div></div><span id="gDiskSub"></span></div>
+        <div class="sh-g"><b>Network</b><div class="gw"><canvas id="gNet"></canvas><div class="gc"><strong id="gNetVal">—</strong><small>Usage</small></div></div><span id="gNetSub"></span></div>
+      </div>
+      <div class="sh-perf-h"><h4>System Performance (Last 10 Minutes)</h4>
+        <div class="sh-leg"><span><i style="background:#2f7bff"></i>CPU</span><span><i style="background:#1de08f"></i>Memory</span><span><i style="background:#a66cff"></i>Network</span></div></div>
+      <div class="sh-chart"><canvas id="chartHistory"></canvas></div>
+    </div>
+
+    <div class="d-panel">
+      <div class="d-head"><span class="d-head-ic bare" style="color:#ffc83d"><svg class="ic"><use href="#i-zap"/></svg></span><h3>Quick Actions</h3></div>
+      <div class="sh-qa">
+        <button class="qa q-blue" id="btnRestart" type="button"><svg class="ic"><use href="#i-rotate-cw"/></svg><span>Restart Bot</span><svg class="ic ar"><use href="#i-chevron-right"/></svg></button>
+        <button class="qa q-purple" id="btnCache" type="button"><svg class="ic"><use href="#i-database"/></svg><span>Clear Cache</span><svg class="ic ar"><use href="#i-chevron-right"/></svg></button>
+        <button class="qa q-green" id="btnLogs" type="button"><svg class="ic"><use href="#i-file-text"/></svg><span>View Logs</span><svg class="ic ar"><use href="#i-chevron-right"/></svg></button>
+        <button class="qa q-orange" id="btnCheck" type="button"><svg class="ic"><use href="#i-link"/></svg><span>Check APIs</span><svg class="ic ar"><use href="#i-chevron-right"/></svg></button>
+      </div>
+    </div>
+  </section>
+
+  <section class="d-panel" id="logsPanel">
+    <div class="d-head"><span class="d-head-ic bare"><svg class="ic"><use href="#i-file-text"/></svg></span><h3>Recent System Logs</h3>
+      <button class="sh-all" id="viewAll" type="button">View All <svg class="ic"><use href="#i-arrow-right"/></svg></button></div>
+    <div class="sh-scroll">
+      <table class="sh-tbl logs"><thead><tr><th>#</th><th>Time</th><th>Level</th><th>Message</th><th>Source</th></tr></thead><tbody id="logsBody"></tbody></table>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function init_system() {
+  const $ = (id) => document.getElementById(id);
+  let showAll = false, lastData = null;
+  const lvl = { SUCCESS: "ok", WARNING: "warn", INFO: "info", ERROR: "err" };
+  const srcClass = (s) => { s = (s || "").toLowerCase(); if (s.includes("webhook") || s === "message") return "g"; if (s.startsWith("/") || s.includes("job") || s.includes("quiz")) return "b"; if (s.includes("db") || s.includes("database")) return "p"; if (s.includes("api") || s.includes("external")) return "o"; return "s"; };
+  const stCls = (s) => (s === "Healthy" || s === "Connected" || s === "Online") ? "ok" : (s === "Idle" || s === "Slow") ? "warn" : "err";
+  const upTxt = (sec) => sec >= 86400 ? `${Math.floor(sec / 86400)}d ${Math.floor((sec % 86400) / 3600)}h` : sec >= 3600 ? `${Math.floor(sec / 3600)}h ${Math.floor((sec % 3600) / 60)}m` : `${Math.floor(sec / 60)}m`;
+  const fmtLog = (t) => { const d = new Date(String(t).replace(" ", "T") + "Z"); if (isNaN(d)) return t;
+    return d.toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true }).replace(",", ",").replace(/, (\d+:\d+)/, " $1"); };
+
+  function dot(id, cls) { $(id).className = "sh-dot " + cls; }
+  function gauge(cv, valId, subId, pct, color, sub) {
+    gaugeChart($(cv), pct || 0, color);
+    $(valId).textContent = pct != null ? Math.round(pct) + "%" : "n/a";
+    $(subId).textContent = sub || "";
+  }
+
+  function render(s) {
+    const ok = s.all_operational;
+    $("opStatus").classList.toggle("bad", !ok);
+    $("opText").textContent = ok ? "All Systems Operational" : "Some Services Degraded";
+
+    const bot = $("hBot"); bot.textContent = s.bot_status; bot.className = "v-" + stCls(s.bot_status);
+    $("hBotSub").textContent = "Uptime: " + upTxt(s.uptime_seconds || 0); dot("dBot", stCls(s.bot_status));
+    $("hDb").textContent = s.database_status; $("hDb").className = "v-" + stCls(s.database_status);
+    $("hDbSub").textContent = `Response: ${Math.round(s.database_response_ms)}ms`; dot("dDb", stCls(s.database_status));
+    $("hWeb").textContent = s.web_server_status; $("hWeb").className = "v-" + stCls(s.web_server_status);
+    $("hWebSub").textContent = `Response: ${Math.round(s.web_server_response_ms)}ms`; dot("dWeb", stCls(s.web_server_status));
+    $("hWa").textContent = s.whatsapp_status; $("hWa").className = "v-" + stCls(s.whatsapp_status);
+    $("hWaSub").textContent = s.whatsapp_status === "Connected" ? "Status: Active" : "No recent webhooks"; dot("dWa", stCls(s.whatsapp_status));
+
+    const icons = { api: "code", db: "database", whatsapp: "whatsapp", ai: "brain", external: "link" };
+    $("serviceBody").innerHTML = (s.services || []).map((v) => `<tr>
+      <td><span class="sv"><svg class="ic"><use href="#i-${icons[v.key] || "link"}"/></svg>${esc(v.name)}</span></td>
+      <td><span class="tag ${stCls(v.status)}">${esc(v.status)}</span></td>
+      <td>${v.response_ms != null ? Math.round(v.response_ms) + " ms" : "—"}</td>
+      <td class="upt">${v.uptime_pct != null ? v.uptime_pct.toFixed(1) + "%" : "—"}</td></tr>`).join("");
+
+    const r = s.resources || {};
+    gauge("gCpu", "gCpuVal", "gCpuSub", r.cpu_pct, "#2f7bff", r.cpu_cores ? `(${r.cpu_cores_used} / ${r.cpu_cores} cores)` : "");
+    gauge("gMem", "gMemVal", "gMemSub", r.memory_pct, "#1de08f", r.memory_used_gb != null ? `(${r.memory_used_gb} / ${r.memory_total_gb} GB)` : "");
+    gauge("gDisk", "gDiskVal", "gDiskSub", r.disk_pct, "#ffb020", `(${Math.round(r.disk_used_gb)} / ${Math.round(r.disk_total_gb)} GB)`);
+    gauge("gNet", "gNetVal", "gNetSub", r.network_pct, "#7c8cff", r.network_mbps != null ? `(${r.network_mbps} MB/s)` : "");
+
+    const h = s.history || [];
+    const cv = $("chartHistory"); destroyChart(cv);
+    const ds = (label, key, c) => ({ label, data: h.map((p) => p[key]), borderColor: c, backgroundColor: c + "22", fill: key === "mem", tension: .4, borderWidth: 2, pointRadius: 3, pointBackgroundColor: c });
+    cv._chart = new Chart(cv, { type: "line", data: { labels: h.map((p) => p.t), datasets: [ds("CPU", "cpu", "#2f7bff"), ds("Memory", "mem", "#1de08f"), ds("Network", "net", "#a66cff")] },
+      options: { responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false }, plugins: { legend: { display: false } },
+        scales: { y: { min: 0, max: 100, ticks: { stepSize: 50, callback: (v) => v + "%", color: "#a3afe0" }, grid: { color: "rgba(120,140,220,.12)" } },
+                  x: { ticks: { color: "#a3afe0", maxTicksLimit: 6, autoSkip: true, maxRotation: 0 }, grid: { display: false } } } } });
+
+    $("logsBody").innerHTML = (s.recent_logs || []).map((l, i) => `<tr><td>${i + 1}</td><td class="nw">${esc(fmtLog(l.time))}</td>
+      <td><span class="tag ${lvl[l.level] || "err"}">${esc(l.level)}</span></td><td>${esc(l.message)}</td>
+      <td><span class="src ${srcClass(l.source)}">${esc(l.source)}</span></td></tr>`).join("") || '<tr><td colspan="5" class="empty-state">No logs yet</td></tr>';
+    $("viewAll").innerHTML = (showAll ? "Show Less " : "View All ") + '<svg class="ic"><use href="#i-arrow-right"/></svg>';
+  }
+
+  async function load(quiet) {
+    try { lastData = await fetchJSON("/api/data/system?logs=" + (showAll ? 50 : 5)); render(lastData); return lastData; }
+    catch (e) { if (!quiet) toast("Could not load system health: " + e.message, true); }
+  }
+
+  $("refreshBtn").addEventListener("click", async () => { await load(); toast("System health refreshed."); });
+  $("viewAll").addEventListener("click", () => { showAll = !showAll; load(); });
+  $("btnLogs").addEventListener("click", () => { if (!showAll) { showAll = true; load(); } $("logsPanel").scrollIntoView({ behavior: "smooth" }); });
+  $("btnCheck").addEventListener("click", async () => {
+    const s = await load(true); if (!s) return toast("Could not reach the backend.", true);
+    const bad = (s.services || []).filter((v) => v.status !== "Healthy" && v.status !== "Idle");
+    toast(bad.length ? "Needs attention: " + bad.map((v) => v.name).join(", ") : `All ${s.services.length} services responding.`, !!bad.length);
+  });
+  $("btnRestart").addEventListener("click", () => toast("Restart isn't available from here — redeploy from the Render dashboard.", true));
+  $("btnCache").addEventListener("click", () => toast("The backend keeps no cache to clear.", true));
+
+  load(); setInterval(() => load(true), 30000);
+}
+</script>
+{% endblock %}

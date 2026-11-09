@@ -1,0 +1,306 @@
+{% extends "shell.html" %}
+{% block title %}User — CareerMate Admin{% endblock %}
+{% block page_icon_wrap %}{% endblock %}
+{% block page_title %}{% endblock %}
+{% block page_subtitle_wrap %}{% endblock %}
+
+{% block content %}
+<div class="dash ud">
+  <a class="ud-back" href="{{ url_for('users') }}"><svg class="ic"><use href="#i-arrow-left"/></svg> Back to Users</a>
+
+  <section class="ud-profile">
+    <div class="ud-av" id="pAvatar">U</div>
+    <div class="ud-pinfo">
+      <div class="ud-name"><h1 id="pName">User</h1><span class="d-pill ok" id="pStatus">Active</span></div>
+      <div class="ud-phone"><span>{{ phone }}</span><svg class="ic wa"><use href="#i-whatsapp"/></svg></div>
+      <div class="ud-meta"><svg class="ic"><use href="#i-calendar"/></svg>Joined on: <b id="pJoined">—</b><i class="sep"></i>Last active: <b id="pLastActive">—</b></div>
+    </div>
+    <div class="ud-actions">
+      <a class="pg-btn" href="https://wa.me/{{ phone|replace('+','')|replace(' ','') }}" target="_blank" rel="noopener"><svg class="ic"><use href="#i-message-circle"/></svg> Send Message</a>
+      <button class="pg-btn" id="viewChat"><svg class="ic"><use href="#i-message-square"/></svg> View Chat</button>
+      <button class="pg-btn sq" id="copyPhone" title="Copy phone number"><svg class="ic"><use href="#i-ellipsis-vertical"/></svg></button>
+    </div>
+  </section>
+
+  <nav class="ud-tabs">
+    <button class="tab-btn active" data-tab="overview"><svg class="ic"><use href="#i-house"/></svg> Overview</button>
+    <button class="tab-btn" data-tab="activity"><svg class="ic"><use href="#i-activity"/></svg> Activity</button>
+    <button class="tab-btn" data-tab="jobs"><svg class="ic"><use href="#i-search"/></svg> Job Searches</button>
+    <button class="tab-btn" data-tab="quiz"><svg class="ic"><use href="#i-graduation-cap"/></svg> Quiz Attempts</button>
+    <button class="tab-btn" data-tab="resume"><svg class="ic"><use href="#i-file-text"/></svg> Resume &amp; ATS</button>
+    <button class="tab-btn" data-tab="messages"><svg class="ic"><use href="#i-message-square"/></svg> Messages</button>
+  </nav>
+
+  <!-- ================= OVERVIEW ================= -->
+  <div class="tab-panel active" id="tab-overview">
+    <section class="ud-kpis">
+      <article class="ud-kpi"><span class="ki ki-blue"><svg class="ic"><use href="#i-message-square"/></svg></span><div class="kl">Total Messages</div><div class="kv" id="ovMessages">—</div><div class="kd" id="ovMessagesD"></div></article>
+      <article class="ud-kpi"><span class="ki ki-purple"><svg class="ic"><use href="#i-search"/></svg></span><div class="kl">Job Searches</div><div class="kv" id="ovJobs">—</div><div class="kd" id="ovJobsD"></div></article>
+      <article class="ud-kpi"><span class="ki ki-orange"><svg class="ic"><use href="#i-graduation-cap"/></svg></span><div class="kl">Quiz Attempts</div><div class="kv" id="ovQuiz">—</div><div class="kd" id="ovQuizD"></div></article>
+      <article class="ud-kpi"><span class="ki ki-violet"><svg class="ic"><use href="#i-file-text"/></svg></span><div class="kl">Resume Analyses</div><div class="kv" id="ovResume">—</div><div class="kd" id="ovResumeD"></div></article>
+      <article class="ud-kpi"><span class="ki ki-gold"><svg class="ic"><use href="#i-star"/></svg></span><div class="kl">Avg. Response Time</div><div class="kv" id="ovRt">—</div><div class="kd" id="ovRtD"></div></article>
+    </section>
+
+    <section class="d-row ud-r1">
+      <div class="d-panel">
+        <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-trending-up"/></svg></div>
+          <div><h3>User Activity Over Time</h3><p>Messages and interactions</p></div>
+          <div class="d-legend"><span class="dot" style="background:#2f7bff"></span>Messages <span class="dot" style="background:#1de08f;margin-left:10px"></span>Commands</div></div>
+        <div class="d-chart tall"><canvas id="chartUserActivity"></canvas></div>
+      </div>
+      <div class="d-panel">
+        <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-chart-pie"/></svg></div><h3>Feature Usage Distribution</h3></div>
+        <div class="d-donut-row">
+          <div class="d-donut sm"><canvas id="chartUserFeatures"></canvas><div class="d-donut-center"><b id="ufTotal">0</b><span>Total Uses</span></div></div>
+          <ul class="d-legend-list" id="ufLegend"></ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="d-row ud-r2">
+      <div class="d-panel">
+        <div class="d-head"><div class="d-head-ic bare gold"><svg class="ic"><use href="#i-star"/></svg></div><h3>Top Used Features</h3></div>
+        <div id="topFeatures"></div>
+      </div>
+      <div class="d-panel">
+        <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-filter"/></svg></div><h3>User Funnel</h3></div>
+        <div class="ud-funnel" id="userFunnel"></div>
+      </div>
+      <div class="d-panel">
+        <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-chart-column"/></svg></div><h3>Quick Stats</h3></div>
+        <div class="ud-qs">
+          <div class="qrow"><span class="qi c1"><svg class="ic"><use href="#i-zap"/></svg></span><div><small>Peak Activity</small><b class="c-green" id="qsPeak">—</b><em id="qsPeakSub"></em></div><span class="qa"><svg class="ic"><use href="#i-arrow-up"/></svg></span></div>
+          <div class="qrow"><span class="qi c2"><svg class="ic"><use href="#i-search"/></svg></span><div><small>Most Used Command</small><b id="qsCmd">—</b></div></div>
+          <div class="qrow"><span class="qi c3"><i class="dot"></i></span><div><small>Active Sessions</small><b class="c-green" id="qsDays">—</b></div></div>
+          <div class="qrow"><span class="qi c4"><svg class="ic"><use href="#i-clock"/></svg></span><div><small>Completion Rate</small><b class="c-yellow" id="qsRate">—</b></div><span class="qring" id="qsRing"></span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="d-row ud-r3">
+      <div class="d-panel">
+        <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-search"/></svg></div><h3>Job Search Analytics</h3></div>
+        <div class="d-table-wrap"><table class="d-table ud-table">
+          <thead><tr><th>#</th><th>Domain</th><th>Search Count</th><th>Last Searched</th><th></th></tr></thead>
+          <tbody id="jobsMini"></tbody></table></div>
+      </div>
+      <div class="d-panel">
+        <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-graduation-cap"/></svg></div><h3>Quiz Performance</h3></div>
+        <div class="ud-qstats">
+          <div class="qs st-blue"><b id="qpAttempts">0</b><span>Attempts</span></div>
+          <div class="qs st-green"><b id="qpCorrect">0</b><span>Correct</span></div>
+          <div class="qs st-amber"><b id="qpAcc">0%</b><span>Accuracy</span></div>
+        </div>
+        <div class="d-sub-title" style="margin-top:14px">Top Quiz Topics</div>
+        <div id="quizTopicsMini"></div>
+        <a class="ud-link" href="#" id="viewAttempts">View All Attempts <svg class="ic"><use href="#i-arrow-right"/></svg></a>
+      </div>
+    </section>
+
+    <section class="d-row ud-r4">
+      <div class="d-panel">
+        <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-file-text"/></svg></div><h3>Resume &amp; ATS Analytics</h3></div>
+        <div class="ud-rstats">
+          <div class="rs"><b id="rsTotal">0</b><span>Analyses</span></div>
+          <div class="rs g"><b id="rsAvg">—</b><span>Avg. Score</span></div>
+          <div class="rs y"><b id="rsBest">—</b><span>Best Score</span></div>
+          <div class="rs p"><b id="rsFmt">—</b><span>Formats</span></div>
+        </div>
+        <div class="d-sub-title" style="margin-top:14px">Score Distribution</div>
+        <div class="d-chart sm"><canvas id="chartResumeMini"></canvas></div>
+      </div>
+      <div class="d-panel">
+        <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-clock"/></svg></div><h3>Recent Activity</h3></div>
+        <div class="ud-tl" id="recentActivity"></div>
+      </div>
+      <div class="d-panel">
+        <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-message-square"/></svg></div><h3>Recent Messages</h3></div>
+        <div class="ud-msgs" id="recentMessages"></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ================= OTHER TABS ================= -->
+  <div class="tab-panel" id="tab-activity"><section class="d-panel">
+    <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-activity"/></svg></div><h3>Activity Timeline</h3></div>
+    <div class="ud-tl" id="activityTimeline"></div></section></div>
+
+  <div class="tab-panel" id="tab-jobs"><section class="d-panel">
+    <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-search"/></svg></div><h3>Job Search History</h3></div>
+    <div class="d-table-wrap"><table class="d-table ud-table"><thead><tr><th>#</th><th>Domain</th><th>Searches</th><th>Share</th><th>Last Searched</th></tr></thead><tbody id="jobsBody"></tbody></table></div></section></div>
+
+  <div class="tab-panel" id="tab-quiz"><section class="d-panel">
+    <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-graduation-cap"/></svg></div><h3>Quiz Attempts</h3></div>
+    <div class="d-table-wrap"><table class="d-table ud-table"><thead><tr><th>Topic</th><th>Score</th><th>Status</th><th>When</th></tr></thead><tbody id="quizBody"></tbody></table></div></section></div>
+
+  <div class="tab-panel" id="tab-resume"><section class="d-panel">
+    <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-file-text"/></svg></div><h3>Resume &amp; ATS Analyses</h3></div>
+    <div class="d-table-wrap"><table class="d-table ud-table"><thead><tr><th>#</th><th>ATS Score</th><th>Analyzed On</th></tr></thead><tbody id="resumeBody"></tbody></table></div></section></div>
+
+  <div class="tab-panel" id="tab-messages"><section class="d-panel">
+    <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-message-square"/></svg></div><h3>Message Log</h3></div>
+    <div class="d-table-wrap"><table class="d-table ud-table"><thead><tr><th>Type</th><th>Command</th><th>Status</th><th>Time</th></tr></thead><tbody id="messagesBody"></tbody></table></div></section></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function init_users() {
+  const phone = {{ phone|tojson }};
+  const ICON = (n) => `<svg class="ic"><use href="#i-${n}"/></svg>`;
+  const GRID = "rgba(90,115,210,.16)", TICK = "#9ea5cf";
+  const DC = ["#15c3ff", "#16e0a8", "#ffcf3f", "#a97bff", "#ff5c9d"];
+  const shortDate = (iso) => new Date(iso + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const fullDate = (iso) => new Date(String(iso).replace(" ", "T")).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const fullDT = (iso) => { const d = new Date(String(iso).replace(" ", "T")); return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) + " " + d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }); };
+  const mk = (id, cfg) => { const c = document.getElementById(id); destroyChart(c); c._chart = new Chart(c, cfg); };
+  const $ = (id) => document.getElementById(id);
+  const setTab = (name) => {
+    document.querySelectorAll(".tab-btn").forEach((b) => b.classList.toggle("active", b.dataset.tab === name));
+    document.querySelectorAll(".tab-panel").forEach((p) => p.classList.toggle("active", p.id === "tab-" + name));
+  };
+  document.querySelectorAll(".tab-btn").forEach((btn) => btn.addEventListener("click", () => setTab(btn.dataset.tab)));
+  $("viewChat").addEventListener("click", () => setTab("messages"));
+  $("viewAttempts").addEventListener("click", (e) => { e.preventDefault(); setTab("quiz"); });
+  $("copyPhone").addEventListener("click", () => { try { navigator.clipboard.writeText(phone); toast("Phone number copied."); } catch (e) { toast(phone); } });
+
+  function kd(el, v, label, invert) {
+    if (v == null) { el.innerHTML = `<span class="vs">${label}</span>`; return; }
+    const good = invert ? v <= 0 : v >= 0;
+    const arrow = v < 0 ? "arrow-down" : "arrow-up";
+    el.innerHTML = `<span class="${v === 0 ? "flat" : good ? "up" : "down"}">${v === 0 ? "" : ICON(arrow)} ${v > 0 ? "+" : ""}${v}</span><span class="vs">${label}</span>`;
+  }
+  const opts = (max) => ({ responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
+    plugins: { legend: { display: false }, tooltip: { backgroundColor: "#0b1444", borderColor: "#1c244b", borderWidth: 1, padding: 10 } },
+    scales: { x: { grid: { color: GRID }, border: { display: false }, ticks: { color: TICK, font: { size: 11 }, padding: 8 } },
+              y: { beginAtZero: true, grid: { color: GRID }, border: { display: false }, ticks: { color: TICK, font: { size: 11 }, precision: 0, stepSize: max <= 6 ? 1 : undefined, padding: 6 } } } });
+
+  async function load() {
+    const days = Number(sessionStorage.getItem("cm_range") || 30);
+    let d;
+    try { d = await fetchJSON(`/api/data/users/${encodeURIComponent(phone)}?days=${days}`); }
+    catch (e) { $("pName").textContent = "User not found"; toast("Could not load this user.", true); return; }
+
+    $("pAvatar").textContent = d.label.slice(0, 1);
+    $("pName").textContent = d.label;
+    $("pStatus").textContent = d.status;
+    $("pJoined").textContent = fullDate(d.joined_on);
+    $("pLastActive").textContent = fullDT(d.last_active);
+
+    const o = d.overview, dl = d.deltas || {}, vs = `vs. last ${dl.days || days} days`;
+    $("ovMessages").textContent = fmt(o.total_messages); kd($("ovMessagesD"), dl.total_messages, vs);
+    $("ovJobs").textContent = fmt(o.job_searches); kd($("ovJobsD"), dl.job_searches, vs);
+    $("ovQuiz").textContent = fmt(o.quiz_attempts); kd($("ovQuizD"), dl.quiz_attempts, vs);
+    $("ovResume").textContent = fmt(o.resume_analyses); kd($("ovResumeD"), dl.resume_analyses, vs);
+    $("ovRt").textContent = o.avg_response_time_s != null ? o.avg_response_time_s + "s" : "—";
+    kd($("ovRtD"), dl.avg_response_time_s != null ? dl.avg_response_time_s : null, vs, true);
+    if (dl.avg_response_time_s != null) $("ovRtD").firstChild.lastChild.textContent = ` ${dl.avg_response_time_s > 0 ? "+" : ""}${dl.avg_response_time_s}s`;
+
+    /* activity chart */
+    const act = d.activity || [];
+    const aMax = Math.max(1, ...act.map((a) => a.messages));
+    mk("chartUserActivity", { type: "line", options: opts(aMax), data: { labels: act.map((a) => shortDate(a.date)), datasets: [
+      { data: act.map((a) => a.messages), borderColor: "#2f7bff", borderWidth: 2.5, tension: .35, pointRadius: 4, pointBackgroundColor: "#2f7bff", pointBorderColor: "#071037", pointBorderWidth: 2, fill: true,
+        backgroundColor: (ctx) => { const a = ctx.chart.chartArea; if (!a) return "transparent"; const g = ctx.chart.ctx.createLinearGradient(0, a.top, 0, a.bottom); g.addColorStop(0, "rgba(47,123,255,.32)"); g.addColorStop(1, "rgba(47,123,255,.02)"); return g; } },
+      { data: act.map((a) => a.commands), borderColor: "#1de08f", borderWidth: 2, tension: .35, pointRadius: 3.5, pointBackgroundColor: "#1de08f", pointBorderColor: "#071037", pointBorderWidth: 2, fill: true,
+        backgroundColor: (ctx) => { const a = ctx.chart.chartArea; if (!a) return "transparent"; const g = ctx.chart.ctx.createLinearGradient(0, a.top, 0, a.bottom); g.addColorStop(0, "rgba(29,224,143,.18)"); g.addColorStop(1, "rgba(29,224,143,0)"); return g; } } ] } });
+
+    /* feature donut (top 4 + Other) */
+    const all = d.feature_usage || [];
+    const total = all.reduce((a, b) => a + b.count, 0);
+    let feats = all.slice(0, 4).map((f) => ({ name: f.command, count: f.count }));
+    const rest = all.slice(4).reduce((a, b) => a + b.count, 0);
+    if (rest > 0) feats.push({ name: "Other", count: rest });
+    $("ufTotal").textContent = fmt(total);
+    mk("chartUserFeatures", { type: "doughnut", options: { responsive: true, maintainAspectRatio: false, cutout: "55%", plugins: { legend: { display: false } } },
+      data: { labels: feats.map((f) => f.name), datasets: [{ data: feats.length ? feats.map((f) => f.count) : [1], backgroundColor: feats.length ? feats.map((_, i) => DC[i % 5]) : ["#18214f"], borderColor: "#071037", borderWidth: 3 }] } });
+    $("ufLegend").innerHTML = feats.map((f, i) => `<li><span class="dot" style="background:${DC[i % 5]}"></span><span class="n">${esc(f.name)}</span><span class="c">${fmt(f.count)}</span><span class="p">${fmtPct(total ? f.count * 100 / total : 0)}</span></li>`).join("") || '<li class="d-none-yet">No feature usage yet</li>';
+
+    /* top used features */
+    const maxF = Math.max(1, ...feats.map((f) => f.count));
+    $("topFeatures").innerHTML = feats.map((f, i) => `
+      <div class="ud-tf"><div class="top"><span>${esc(f.name)}</span><span class="c">${fmt(f.count)}</span><span class="p">${fmtPct(total ? f.count * 100 / total : 0)}</span></div>
+      <div class="track"><i style="width:${Math.max(6, f.count * 100 / maxF)}%;background:${DC[i % 5]}"></i></div></div>`).join("") || '<div class="d-none-yet">No feature usage yet</div>';
+
+    /* funnel */
+    const FI = ["play", "compass", "search", "graduation-cap", "send"], FC = ["#4d93ff", "#16e0a8", "#ffcf3f", "#a97bff", "#ff5c9d"];
+    const steps = (d.funnel && d.funnel.steps) || [];
+    $("userFunnel").innerHTML = steps.map((s, i) => {
+      const pct = steps[0].value ? Math.round(s.value * 100 / steps[0].value) : 0;
+      return `<div class="fr" style="--c:${FC[i % 5]}"><span class="fi">${ICON(FI[i % 5])}</span><span class="fl">${esc(s.label)}</span><b>${fmt(s.value)}</b><em>${pct}%</em></div>`;
+    }).join("");
+
+    /* quick stats */
+    const qs = d.quick_stats || {};
+    $("qsPeak").textContent = d.peak_day ? fullDate(d.peak_day.date + "T00:00:00") : "—";
+    $("qsPeakSub").textContent = d.peak_day ? `${d.peak_day.messages} message${d.peak_day.messages === 1 ? "" : "s"}` : "";
+    $("qsCmd").textContent = qs.most_used_command || "—";
+    $("qsDays").textContent = qs.active_days != null ? fmt(qs.active_days) : "—";
+    $("qsRate").textContent = qs.quiz_completion_rate != null ? qs.quiz_completion_rate + "%" : "—";
+    $("qsRing").style.setProperty("--p", (qs.quiz_completion_rate || 0) + "%");
+
+    /* job search analytics (mini + full) */
+    const jobs = d.job_domains || [];
+    const now = Date.now();
+    const tag = (j, i) => {
+      if (i === 0) return ["Most Searched", "t-blue"];
+      const recent = now - new Date(String(j.last).replace(" ", "T")).getTime() < 7 * 864e5;
+      if (j.count > 1 && recent) return ["Trending", "t-green"];
+      if (j.count === 1) return ["New", "t-purple"];
+      return null;
+    };
+    $("jobsMini").innerHTML = jobs.slice(0, 4).map((j, i) => { const t = tag(j, i); return `
+      <tr><td>${i + 1}</td><td><b>${esc(j.topic)}</b></td><td>${fmt(j.count)}</td><td>${esc(fullDate(j.last))}</td>
+      <td>${t ? `<span class="ud-tag ${t[1]}">${t[0]}</span>` : ""}</td></tr>`; }).join("") || '<tr><td colspan="5" class="d-none-yet" style="text-align:center">No job searches yet</td></tr>';
+    $("jobsBody").innerHTML = jobs.map((j, i) => `<tr><td>${i + 1}</td><td><b>${esc(j.topic)}</b></td><td>${fmt(j.count)}</td><td>${fmtPct(j.pct)}</td><td>${esc(fullDT(j.last))}</td></tr>`).join("") ||
+      '<tr><td colspan="5" class="d-none-yet" style="text-align:center">No job searches yet</td></tr>';
+
+    /* quiz performance */
+    const qsum = d.quiz_summary || {};
+    $("qpAttempts").textContent = fmt(o.quiz_attempts);
+    $("qpCorrect").textContent = fmt(qsum.correct || 0);
+    $("qpAcc").textContent = qsum.accuracy_pct != null ? qsum.accuracy_pct + "%" : "0%";
+    const QC = ["#4d93ff", "#16e0a8", "#a97bff", "#ffcf3f"];
+    $("quizTopicsMini").innerHTML = (d.quiz_topics || []).slice(0, 3).map((q, i) => `
+      <div class="ud-qt"><span class="n">${esc(q.topic)}</span><span class="f">${q.correct} / ${q.questions}</span>
+      <span class="track"><i style="width:${q.avg_pct}%;background:${q.avg_pct < 40 ? "#ff5c9d" : "#16e0a8"}"></i></span><span class="p">${fmtPct(q.avg_pct)}</span></div>`).join("") || '<div class="d-none-yet">No quiz attempts yet</div>';
+    $("quizBody").innerHTML = (d.quiz_list || []).map((q) => `<tr><td><b>${esc(q.topic)}</b></td><td>${q.score != null ? q.score + " / " + q.total : "—"}</td>
+      <td><span class="d-pill ${q.status === "Passed" ? "ok" : "bad"}">${esc(q.status)}</span></td><td>${esc(fullDT(q.timestamp))}</td></tr>`).join("") ||
+      '<tr><td colspan="4" class="d-none-yet" style="text-align:center">No quiz attempts yet</td></tr>';
+
+    /* resume */
+    const rs = d.resume_stats || {};
+    $("rsTotal").textContent = fmt(rs.total || 0);
+    $("rsAvg").textContent = rs.avg != null ? Math.round(rs.avg) + "%" : "—";
+    $("rsBest").textContent = rs.best != null ? Math.round(rs.best) + "%" : "—";
+    const fm = Object.keys(d.resume_formats || {});
+    $("rsFmt").textContent = fm.length ? fm[0] : "—";
+    const rd = rs.distribution5 || {};
+    const rk = ["0-20", "21-40", "41-60", "61-80", "81-100"], rv = rk.map((k) => rd[k] || 0);
+    mk("chartResumeMini", { type: "bar", options: opts(Math.max(1, ...rv)), data: { labels: rk, datasets: [{ data: rv, backgroundColor: "#2fb4ff", barPercentage: .6, categoryPercentage: .8 }] } });
+    $("resumeBody").innerHTML = (d.resume_list || []).map((r, i) => `<tr><td>${i + 1}</td><td>${r.score != null ? r.score + "%" : "—"}</td><td>${esc(fullDT(r.timestamp))}</td></tr>`).join("") ||
+      '<tr><td colspan="3" class="d-none-yet" style="text-align:center">No resume analyses yet</td></tr>';
+
+    /* recent activity / messages */
+    const TAGC = { "Job Search": "t-blue", Quiz: "t-green", Resume: "t-purple", Command: "t-amber", Event: "t-blue" };
+    const DOTC = { "Job Search": "#2f7bff", Quiz: "#16e0a8", Resume: "#a97bff", Command: "#ffcf3f", Event: "#ff5c9d" };
+    const msgs = d.messages || [];
+    const tl = (list) => list.map((m) => `
+      <div class="ti"><span class="td" style="background:${DOTC[m.tag] || "#2f7bff"}"></span>
+      <div class="tb"><div>${esc(fullDT(m.timestamp))}</div><div>${esc(m.desc)}${m.success ? "" : " — failed"}</div></div>
+      <span class="ud-tag ${TAGC[m.tag] || "t-blue"}">${esc(m.tag)}</span></div>`).join("") || '<div class="d-none-yet">No activity recorded yet</div>';
+    $("recentActivity").innerHTML = tl(msgs.slice(0, 5));
+    $("activityTimeline").innerHTML = tl(msgs.slice(0, 25));
+    $("recentMessages").innerHTML = msgs.slice(0, 5).map((m) => `
+      <div class="mi"><span class="mc" style="background:${DOTC[m.tag] || "#2f7bff"}"></span>
+      <div><div>${esc(m.command || m.desc)}</div><small>${esc(fullDT(m.timestamp))}</small></div></div>`).join("") || '<div class="d-none-yet">No messages yet</div>';
+    $("messagesBody").innerHTML = msgs.map((m) => `<tr><td>${esc(m.event_type)}</td><td>${esc(m.command || "—")}</td>
+      <td><span class="d-pill ${m.success ? "ok" : "bad"}">${m.success ? "Success" : "Failed"}</span></td><td>${esc(fullDT(m.timestamp))}</td></tr>`).join("") ||
+      '<tr><td colspan="4" class="d-none-yet" style="text-align:center">No messages yet</td></tr>';
+  }
+
+  document.addEventListener("rangechange", load);
+  load();
+}
+</script>
+{% endblock %}

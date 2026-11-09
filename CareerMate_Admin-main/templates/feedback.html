@@ -1,0 +1,204 @@
+{% extends "shell.html" %}
+{% block title %}Feedback Analytics — CareerMate Admin{% endblock %}
+{% block sidebar_sub %}Analytics Panel{% endblock %}
+{% block page_icon_wrap %}<div class="pg-ic cy"><svg class="ic"><use href="#i-message-square"/></svg></div>{% endblock %}
+{% block page_title %}Feedback <span class="t-cyan">Analytics</span>{% endblock %}
+{% block page_subtitle %}Track user feedback, suggestions and sentiment analysis.{% endblock %}
+{% block page_actions %}
+<label class="pg-search wide"><svg class="ic"><use href="#i-search"/></svg><input id="fbSearch" type="text" placeholder="Search by user, message, or keyword..."></label>
+<button class="pg-btn grn" id="fbExport"><svg class="ic"><use href="#i-download"/></svg> Export Report</button>
+{% endblock %}
+
+{% block content %}
+<style>
+.fb-grid{display:grid;gap:14px}
+.fb-r1{grid-template-columns:minmax(0,1fr) minmax(0,1.9fr)}
+.fb-r2{grid-template-columns:minmax(0,1.9fr) minmax(0,1fr)}
+.fb-r3{grid-template-columns:minmax(0,1.9fr) minmax(0,1fr)}
+.fb-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.fb-card{border-radius:12px;padding:14px 10px;text-align:center;border:1px solid var(--border)}
+.fb-card i{font-size:1.5rem;display:block;margin-bottom:6px}
+.fb-card small{display:block;font-size:.72rem;font-weight:700;margin-bottom:4px}
+.fb-card b{font-size:1.7rem;display:block}.fb-card span{font-size:.78rem;color:var(--ink-dim)}
+.fb-card.pos{background:rgba(29,224,143,.12);border-color:rgba(29,224,143,.5);color:var(--green)}
+.fb-card.neg{background:rgba(255,79,152,.12);border-color:rgba(255,79,152,.5);color:var(--pink)}
+.fb-card.sug{background:rgba(166,108,255,.14);border-color:rgba(166,108,255,.5);color:var(--violet)}
+.fb-card b,.fb-card span{color:var(--ink)}.fb-card span{color:var(--ink-dim)}
+.fb-dist{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.fb-dist>div{min-width:0}
+.fb-donut{position:relative;width:110px;height:110px;margin:0 auto 10px}
+.fb-donut .c{position:absolute;inset:0;display:grid;place-content:center;text-align:center;line-height:1.1}
+.fb-donut .c b{font-size:1.05rem}.fb-donut .c span{font-size:.68rem;color:var(--ink-dim)}
+.fb-leg{list-style:none;margin:0;padding:0;font-size:.78rem}
+.fb-leg li{display:flex;align-items:center;gap:7px;padding:3px 0}
+.fb-leg .dot{width:9px;height:9px;border-radius:50%;flex:none}.fb-leg .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.fb-leg .p{color:var(--ink-dim)}
+.fb-chart{position:relative;height:230px}
+.fb-key{display:flex;gap:14px;font-size:.75rem;margin-left:auto;color:var(--ink-dim)}
+.fb-key span:before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;background:var(--c)}
+.fb-sum{display:grid;grid-template-columns:130px 1fr;gap:14px;align-items:center}
+.fb-sumrows{display:grid;gap:8px}
+.fb-sumrow{display:flex;justify-content:space-between;padding:9px 12px;border-radius:9px;border:1px solid var(--border);font-size:.82rem}
+.fb-pill{display:inline-block;padding:3px 10px;border-radius:7px;font-size:.7rem;font-weight:700}
+.fb-pill.positive{background:rgba(29,224,143,.2);color:var(--green)}.fb-pill.negative{background:rgba(255,79,152,.2);color:var(--pink)}.fb-pill.suggestion{background:rgba(166,108,255,.22);color:var(--violet)}
+.fb-msg{max-width:340px;word-break:break-word}.fb-conf{color:var(--ink-dim);font-size:.7rem}
+.fb-relabel{background:var(--panel2);color:var(--ink);border:1px solid var(--border);border-radius:6px;font-size:.7rem;padding:2px 4px}
+.fb-todo h4{margin:12px 0 6px;padding:8px 10px;border-radius:9px;font-size:.82rem;display:flex;justify-content:space-between;align-items:center}
+.fb-todo h4.hi{background:rgba(255,79,152,.15);color:var(--pink)}.fb-todo h4.su{background:rgba(166,108,255,.16);color:var(--violet)}
+.fb-todo h4 em{font-style:normal;background:var(--pink);color:#fff;border-radius:50%;min-width:20px;height:20px;display:grid;place-items:center;font-size:.7rem}
+.fb-todo h4.su em{background:var(--violet)}
+.fb-item{display:flex;gap:9px;align-items:flex-start;padding:7px 4px;font-size:.8rem;border-bottom:1px solid var(--border)}
+.fb-item input{margin-top:3px;accent-color:var(--cyan)}.fb-item .t{flex:1;min-width:0;word-break:break-word}.fb-item .d{display:block;color:var(--ink-dim);font-size:.68rem}
+.fb-item.done .t{text-decoration:line-through;opacity:.55}
+.fb-tag{font-size:.65rem;padding:2px 8px;border-radius:6px;background:rgba(47,123,255,.2);color:#6fa8ff;white-space:nowrap}
+.fb-empty{color:var(--ink-dim);font-size:.8rem;padding:10px 4px}
+@media(max-width:1100px){.fb-r1,.fb-r2,.fb-r3{grid-template-columns:1fr}.fb-dist{grid-template-columns:1fr}}
+</style>
+<div class="fb-grid">
+  <section class="fb-grid fb-r1">
+    <div class="d-panel">
+      <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-circle-check"/></svg></div><h3>Feedback Overview</h3></div>
+      <div class="fb-cards">
+        <div class="fb-card pos"><i class="fa-regular fa-face-smile"></i><small>Positive Responses</small><b id="cPos">0</b><span id="pPos">(0%)</span></div>
+        <div class="fb-card neg"><i class="fa-regular fa-face-frown"></i><small>Negative Responses</small><b id="cNeg">0</b><span id="pNeg">(0%)</span></div>
+        <div class="fb-card sug"><i class="fa-regular fa-lightbulb"></i><small>Suggestions</small><b id="cSug">0</b><span id="pSug">(0%)</span></div>
+      </div>
+    </div>
+    <div class="d-panel">
+      <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-brain"/></svg></div><div><h3>Feedback Distribution (ML Classification)</h3><p id="modelName"></p></div></div>
+      <div class="fb-dist">
+        <div><div class="fb-donut"><canvas id="dPos"></canvas><div class="c"><b id="dPosP">0%</b><span>Positive</span></div></div><ul class="fb-leg" id="lPos"></ul></div>
+        <div><div class="fb-donut"><canvas id="dNeg"></canvas><div class="c"><b id="dNegP">0%</b><span>Negative</span></div></div><ul class="fb-leg" id="lNeg"></ul></div>
+        <div><div class="fb-donut"><canvas id="dSug"></canvas><div class="c"><b id="dSugP">0%</b><span>Suggestions</span></div></div><ul class="fb-leg" id="lSug"></ul></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="fb-grid fb-r2">
+    <div class="d-panel">
+      <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-trending-up"/></svg></div><h3 id="trendTitle">Feedback Trend</h3>
+        <div class="fb-key"><span style="--c:#1de08f">Positive</span><span style="--c:#ff4f98">Negative</span><span style="--c:#a66cff">Suggestions</span></div></div>
+      <div class="fb-chart"><canvas id="trend"></canvas></div>
+    </div>
+    <div class="d-panel">
+      <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-chart-pie"/></svg></div><h3>Sentiment Summary</h3></div>
+      <div class="fb-sum">
+        <div class="fb-donut" style="width:130px;height:130px;margin:0"><canvas id="sumChart"></canvas><div class="c"><b id="sumP" style="font-size:1.3rem">0%</b><span>Positive</span></div></div>
+        <div class="fb-sumrows">
+          <div class="fb-sumrow" style="border-color:rgba(29,224,143,.5)"><span>Positive</span><b id="sPos">0%</b></div>
+          <div class="fb-sumrow" style="border-color:rgba(255,79,152,.5)"><span>Negative</span><b id="sNeg">0%</b></div>
+          <div class="fb-sumrow" style="border-color:rgba(166,108,255,.5)"><span>Suggestions</span><b id="sSug">0%</b></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="fb-grid fb-r3">
+    <div class="d-panel">
+      <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-message-circle"/></svg></div><h3>Recent User Feedback</h3><a class="fa-va" href="#" id="fbAll">View All <svg class="ic"><use href="#i-arrow-right"/></svg></a></div>
+      <div class="d-table-wrap"><table class="d-table js-table"><thead><tr><th>#</th><th>User</th><th>Type</th><th>Message</th><th>Date &amp; Time</th><th>Sentiment</th></tr></thead><tbody id="fbRecent"></tbody></table></div>
+    </div>
+    <div class="d-panel fb-todo">
+      <div class="d-head"><div class="d-head-ic bare"><svg class="ic"><use href="#i-list"/></svg></div><h3>Feedback To-Do List</h3></div>
+      <h4 class="hi"><span>High Priority (Negative Reviews)</span><em id="hiN">0</em></h4><div id="hiList"></div>
+      <h4 class="su"><span>Suggestions to Consider</span><em id="suN">0</em></h4><div id="suList"></div>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function init_feedback() {
+  const $ = (id) => document.getElementById(id);
+  const state = { days: Number(sessionStorage.getItem("cm_range") || 30), search: "", all: false };
+  const COL = { positive: "#1de08f", negative: "#ff4f98", suggestion: "#a66cff" };
+  const SUBC = { positive: ["#1de08f", "#a66cff", "#ffcf3f", "#15c3ff"], negative: ["#ff4f98", "#a66cff", "#ff8a4d", "#ffcf3f"], suggestion: ["#a66cff", "#b894ff", "#ff8fc0", "#15c3ff"] };
+  const TYPE = { positive: "+ve", negative: "-ve", suggestion: "Suggestion" };
+  const SENT = { positive: "Positive", negative: "Negative", suggestion: "Suggestion" };
+  let data = null;
+  const mk = (id, cfg) => { const c = $(id); destroyChart(c); c._chart = new Chart(c, cfg); };
+  const dt = (s) => { const d = new Date(String(s).replace(" ", "T") + "Z"); return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) + " " + d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }); };
+  const sd = (s) => new Date(String(s).replace(" ", "T") + "Z").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const match = (r) => !state.search || [r.user, r.phone, r.message, r.type, r.category, r.tag].join(" ").toLowerCase().includes(state.search);
+
+  function donut(canvasId, pctId, legId, kind) {
+    const d = data.distribution[kind], items = d.items;
+    $(pctId).textContent = fmtPct(data.pct[kind]);
+    mk(canvasId, { type: "doughnut", options: { responsive: true, maintainAspectRatio: false, cutout: "68%", plugins: { legend: { display: false } } },
+      data: { labels: items.map((i) => i.name), datasets: [{ data: items.length ? items.map((i) => i.count) : [1], backgroundColor: items.length ? items.map((_, k) => SUBC[kind][k % 4]) : ["#18214f"], borderColor: "#071037", borderWidth: 2 }] } });
+    $(legId).innerHTML = items.map((i, k) => `<li><span class="dot" style="background:${SUBC[kind][k % 4]}"></span><span class="n">${esc(i.name)}</span><span class="p">${fmtPct(i.pct)}</span></li>`).join("") || '<li class="fb-empty">No feedback yet</li>';
+  }
+
+  async function post(path, body) {
+    const r = await fetch("/api/data/" + path, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (r.status === 401) { window.location.href = "/login"; return; }
+    if (!r.ok) throw new Error("request failed");
+    return r.json();
+  }
+
+  function todo(listId, countId, rows, open) {
+    $(countId).textContent = open;
+    const list = rows.filter(match);
+    $(listId).innerHTML = list.map((r) => `<label class="fb-item ${r.resolved ? "done" : ""}"><input type="checkbox" data-id="${r.id}" ${r.resolved ? "checked" : ""}>
+      <span class="t">${esc(r.message.length > 90 ? r.message.slice(0, 90) + "…" : r.message)}<span class="d">${esc(dt(r.time))}</span></span><span class="fb-tag">${esc(r.tag)}</span></label>`).join("") || '<div class="fb-empty">Nothing here.</div>';
+    $(listId).querySelectorAll("input").forEach((cb) => cb.addEventListener("change", async () => {
+      try { await post("feedback/resolve", { id: Number(cb.dataset.id), resolved: cb.checked }); load(); } catch (e) { cb.checked = !cb.checked; toast("Could not update — try again.", true); }
+    }));
+  }
+
+  function renderRecent() {
+    let rows = data.recent.filter(match);
+    if (!state.all && !state.search) rows = rows.slice(0, 8);
+    $("fbRecent").innerHTML = rows.map((r, i) => `<tr><td>${i + 1}</td>
+      <td><span class="u-who"><span class="av sm round" style="background:${COL[r.type]}">${esc(r.user.slice(-1))}</span><a href="/users/${encodeURIComponent(r.phone)}">${esc(r.user)}</a></span></td>
+      <td><span class="fb-pill ${r.type}">${TYPE[r.type]}</span></td>
+      <td class="fb-msg">${esc(r.message)}<div class="fb-conf">${esc(r.category || "")} · ML confidence ${Math.round((r.confidence || 0) * 100)}%
+        <select class="fb-relabel" data-id="${r.id}" title="Correct the ML label"><option value="">fix label…</option><option value="positive">Positive</option><option value="negative">Negative</option><option value="suggestion">Suggestion</option></select></div></td>
+      <td>${esc(dt(r.time))}</td><td><span class="fb-pill ${r.type}">${SENT[r.type]}</span></td></tr>`).join("") ||
+      '<tr><td colspan="6" class="d-none-yet" style="text-align:center">No feedback in this period yet — users send it with /feedback.</td></tr>';
+    $("fbRecent").querySelectorAll(".fb-relabel").forEach((s) => s.addEventListener("change", async () => {
+      if (!s.value) return;
+      try { await post("feedback/relabel", { id: Number(s.dataset.id), label: s.value }); toast("Label corrected — used to retrain the model on next restart."); load(); } catch (e) { toast("Could not update the label.", true); }
+    }));
+  }
+
+  function render() {
+    const c = data.counts, p = data.pct;
+    $("cPos").textContent = fmt(c.positive); $("cNeg").textContent = fmt(c.negative); $("cSug").textContent = fmt(c.suggestion);
+    $("pPos").textContent = `(${fmtPct(p.positive)})`; $("pNeg").textContent = `(${fmtPct(p.negative)})`; $("pSug").textContent = `(${fmtPct(p.suggestion)})`;
+    $("modelName").textContent = "Model: " + data.model;
+    donut("dPos", "dPosP", "lPos", "positive"); donut("dNeg", "dNegP", "lNeg", "negative"); donut("dSug", "dSugP", "lSug", "suggestion");
+    $("trendTitle").innerHTML = `Feedback Trend <span style="font-weight:400;color:var(--ink-dim)">(Last ${state.days} Days)</span>`;
+    const t = data.trend, ds = (k) => ({ label: SENT[k], data: t[k], borderColor: COL[k], backgroundColor: COL[k] + "22", tension: 0.25, pointRadius: 2, borderWidth: 2, fill: k === "positive" });
+    mk("trend", { type: "line", data: { labels: t.labels.map(sd), datasets: ["positive", "negative", "suggestion"].map(ds) },
+      options: { responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false }, plugins: { legend: { display: false } },
+        scales: { x: { ticks: { color: "#a3afe0", maxTicksLimit: 8 }, grid: { display: false } }, y: { beginAtZero: true, ticks: { color: "#a3afe0", precision: 0 }, grid: { color: "#1c244b" } } } } });
+    mk("sumChart", { type: "doughnut", options: { responsive: true, maintainAspectRatio: false, cutout: "70%", plugins: { legend: { display: false } } },
+      data: { labels: ["Positive", "Negative", "Suggestions"], datasets: [{ data: data.total ? [c.positive, c.negative, c.suggestion] : [1], backgroundColor: data.total ? [COL.positive, COL.negative, COL.suggestion] : ["#18214f"], borderColor: "#071037", borderWidth: 2 }] } });
+    $("sumP").textContent = fmtPct(p.positive); $("sPos").textContent = fmtPct(p.positive); $("sNeg").textContent = fmtPct(p.negative); $("sSug").textContent = fmtPct(p.suggestion);
+    renderRecent();
+    todo("hiList", "hiN", data.todo.high, data.todo.high_open);
+    todo("suList", "suN", data.todo.suggestions, data.todo.suggestions_open);
+  }
+
+  async function load() {
+    const { start, end } = rangeDates(state.days);
+    data = await fetchJSON(`/api/data/feedback/page?start=${start}&end=${end}`);
+    render();
+  }
+
+  const csv = (v) => '"' + String(v ?? "").replace(/"/g, '""') + '"';
+  $("fbExport").addEventListener("click", () => {
+    if (!data || !data.recent.length) return toast("No feedback to export in this period.", true);
+    const rows = [["id", "time_utc", "user", "type", "category", "tag", "ml_confidence", "resolved", "message"]].concat(
+      data.recent.map((r) => [r.id, r.time, r.user, r.type, r.category, r.tag, r.confidence, r.resolved, r.message]));
+    const blob = new Blob(["﻿" + rows.map((r) => r.map(csv).join(",")).join("\n")], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `feedback_${data.start}_to_${data.end}.csv`; a.click(); URL.revokeObjectURL(a.href);
+  });
+  $("fbSearch").addEventListener("input", (e) => { state.search = e.target.value.trim().toLowerCase(); if (data) render(); });
+  $("fbAll").addEventListener("click", (e) => { e.preventDefault(); state.all = true; if (data) renderRecent(); });
+  document.addEventListener("rangechange", (e) => { state.days = Number(e.detail.days); load(); });
+  load();
+}
+</script>
+{% endblock %}

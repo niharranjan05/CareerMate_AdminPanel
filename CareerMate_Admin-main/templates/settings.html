@@ -1,0 +1,201 @@
+{% extends "shell.html" %}
+{% block title %}Settings — CareerMate Admin{% endblock %}
+{% block sidebar_sub %}Analytics Panel{% endblock %}
+{% block page_icon_wrap %}<div class="pg-ic"><svg class="ic"><use href="#i-settings"/></svg></div>{% endblock %}
+{% block page_title %}Settings{% endblock %}
+{% block page_subtitle %}Configure your bot, notifications, API and other preferences.{% endblock %}
+{% block page_actions %}
+<button class="pg-btn" id="resetBtn"><svg class="ic"><use href="#i-rotate-ccw"/></svg> Reset to Default</button>
+<button class="pg-btn solid" id="saveBtn"><svg class="ic"><use href="#i-save"/></svg> Save Changes</button>
+{% endblock %}
+
+{% block content %}
+<div class="dash st">
+  <section class="d-row st-r1">
+    <!-- Bot configuration -->
+    <div class="d-panel">
+      <div class="st-h"><span class="si"><svg class="ic"><use href="#i-bot"/></svg></span><div><h3>Bot Configuration</h3><p>Update basic bot information and behavior.</p></div></div>
+      <label class="st-l" for="botName">Bot Name</label>
+      <input class="st-in" type="text" id="botName" maxlength="40">
+      <label class="st-l" for="welcomeMsg">Welcome Message</label>
+      <textarea class="st-in" id="welcomeMsg" rows="4" maxlength="500"></textarea>
+      <div class="st-count" id="msgCount">0/500</div>
+      <label class="st-l">Bot Avatar</label>
+      <div class="st-avrow">
+        <div class="st-avprev" id="avPrev"></div>
+        <button class="pg-btn sm2" id="changeAv" type="button"><svg class="ic"><use href="#i-upload"/></svg> Change Image</button>
+      </div>
+      <div class="st-avpick" id="avatarPicker" hidden>
+        <button type="button" data-avatar="🤖">🤖</button><button type="button" data-avatar="🎓">🎓</button><button type="button" data-avatar="💼">💼</button><button type="button" data-avatar="🚀">🚀</button><button type="button" data-avatar="⭐">⭐</button>
+      </div>
+      <div class="st-status"><span class="st-l" style="margin:0">Bot Status</span><label class="sw"><input type="checkbox" id="botActive"><i></i></label><span class="st-on" id="botActiveTxt">Active</span></div>
+    </div>
+
+    <!-- WhatsApp -->
+    <div class="d-panel">
+      <div class="st-h"><span class="si wa"><svg class="ic"><use href="#i-whatsapp"/></svg></span><div><h3>WhatsApp Integration</h3><p>Configure WhatsApp bot connection.</p></div></div>
+      <label class="st-l">Access Token</label>
+      <div class="st-secret"><span class="dots" id="waToken">••••••••••••••••••••••</span><button class="eye" type="button" disabled title="Secrets are never sent to the browser"><svg class="ic"><use href="#i-eye"/></svg></button></div>
+      <label class="st-l">Verify Token</label>
+      <div class="st-secret"><span class="dots" id="waVerify">••••••••••••••••••••••</span><button class="eye" type="button" disabled title="Secrets are never sent to the browser"><svg class="ic"><use href="#i-eye"/></svg></button></div>
+      <label class="st-l">Meta App Secret</label>
+      <div class="st-secret"><span class="dots" id="waSecret">••••••••••••••••••••••</span><button class="eye" type="button" disabled title="Secrets are never sent to the browser"><svg class="ic"><use href="#i-eye"/></svg></button></div>
+      <label class="st-l">Graph API Version</label>
+      <div class="st-secret sel"><span id="waGraph">—</span><svg class="ic"><use href="#i-chevron-down"/></svg></div>
+      <label class="st-l">Webhook URL</label>
+      <div class="st-hook"><span id="waWebhook">—</span><button type="button" id="copyWebhook" title="Copy"><svg class="ic"><use href="#i-copy"/></svg></button></div>
+      <div class="st-ok" id="waStatus"><span class="ck"><svg class="ic"><use href="#i-check"/></svg></span><div><b>Checking…</b><small></small></div></div>
+      <div class="st-note">Secrets are managed in your Render environment and are never shown here.</div>
+    </div>
+
+    <!-- DB + env -->
+    <div class="st-stack">
+      <div class="d-panel">
+        <div class="st-h"><span class="si db"><svg class="ic"><use href="#i-database"/></svg></span><div><h3>Database Settings</h3><p>Configure database connection.</p></div></div>
+        <label class="st-l">Database Type</label>
+        <div class="st-secret sel"><span id="dbType">SQLite</span><svg class="ic"><use href="#i-chevron-down"/></svg></div>
+        <label class="st-l">Database URL</label>
+        <div class="st-secret"><span id="dbUrl">—</span></div>
+        <div class="st-ok" id="dbStatus"><span class="ck"><svg class="ic"><use href="#i-check"/></svg></span><div><b>Database Connected</b><small>Total Records: <span id="dbRecords">—</span></small></div></div>
+      </div>
+      <div class="d-panel">
+        <div class="st-h"><span class="si code"><svg class="ic"><use href="#i-code"/></svg></span><div><h3>Environment Variables</h3><p>Manage required environment variables.</p></div></div>
+        <button class="st-wide" id="envBtn" type="button">View All Variables <svg class="ic"><use href="#i-arrow-right"/></svg></button>
+      </div>
+    </div>
+  </section>
+
+  <section class="d-row st-r2">
+    <div class="d-panel">
+      <div class="st-h"><span class="si bell"><svg class="ic"><use href="#i-bell"/></svg></span><div><h3>Notification Settings</h3><p>Control alerts and notifications.</p></div></div>
+      <div class="st-tg"><div><b>New User Registration</b><small>Notify when a new user joins</small></div><label class="sw"><input type="checkbox" id="notifyNewUser"><i></i></label></div>
+      <div class="st-tg"><div><b>New Job / Internship Posted</b><small>Get alerts for new opportunities</small></div><label class="sw"><input type="checkbox" id="notifyNewJob"><i></i></label></div>
+      <div class="st-tg"><div><b>System Errors</b><small>Notify on bot or server errors</small></div><label class="sw"><input type="checkbox" id="notifySystemErrors"><i></i></label></div>
+      <div class="st-tg"><div><b>Weekly Reports</b><small>Get weekly usage summary</small></div><label class="sw"><input type="checkbox" id="notifyWeeklyReports"><i></i></label></div>
+    </div>
+
+    <div class="d-panel">
+      <div class="st-h"><span class="si pal"><svg class="ic"><use href="#i-palette"/></svg></span><div><h3>Appearance Settings</h3><p>Customize the admin panel theme.</p></div></div>
+      <label class="st-l">Theme</label>
+      <div class="st-seg" id="themeGroup">
+        <button type="button" data-theme="dark"><svg class="ic"><use href="#i-moon"/></svg> Dark</button>
+        <button type="button" data-theme="light"><svg class="ic"><use href="#i-sun"/></svg> Light</button>
+        <button type="button" data-theme="auto"><svg class="ic"><use href="#i-monitor"/></svg> Auto</button>
+      </div>
+      <label class="st-l">Primary Color</label>
+      <div class="st-sw" id="colorSwatches">
+        <button type="button" data-color="blue" style="--c:#2f7bff"><svg class="ic"><use href="#i-check"/></svg></button>
+        <button type="button" data-color="violet" style="--c:#a66cff"><svg class="ic"><use href="#i-check"/></svg></button>
+        <button type="button" data-color="green" style="--c:#1de08f"><svg class="ic"><use href="#i-check"/></svg></button>
+        <button type="button" data-color="cyan" style="--c:#17b4ff"><svg class="ic"><use href="#i-check"/></svg></button>
+        <button type="button" data-color="orange" style="--c:#ff9a3d"><svg class="ic"><use href="#i-check"/></svg></button>
+        <button type="button" data-color="pink" style="--c:#ff4f98"><svg class="ic"><use href="#i-check"/></svg></button>
+      </div>
+      <label class="st-l">Sidebar Style</label>
+      <div class="st-seg two" id="sidebarGroup">
+        <button type="button" data-style="compact"><svg class="ic"><use href="#i-panel-left"/></svg> Compact</button>
+        <button type="button" data-style="expanded"><svg class="ic"><use href="#i-panel-left"/></svg> Expanded</button>
+      </div>
+    </div>
+
+    <div class="d-panel">
+      <div class="st-h"><span class="si cloud"><svg class="ic"><use href="#i-cloud"/></svg></span><div><h3>API &amp; External Services</h3><p>Configure external integrations.</p></div></div>
+      <div id="aiProviders"></div>
+    </div>
+  </section>
+</div>
+
+<div class="st-modal" id="stModal" hidden>
+  <div class="st-card"><div class="st-mh"><h3 id="mTitle"></h3><button type="button" id="mClose" aria-label="Close"><svg class="ic"><use href="#i-x"/></svg></button></div><div id="mBody"></div></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function init_settings() {
+  const $ = (id) => document.getElementById(id);
+  const DEFAULTS = { bot_name: "CareerMate", welcome_message: "Welcome back, {user}!\nI'm your CareerMate bot. Use the sidebar to explore all features and find the best opportunities!",
+    bot_active: true, bot_avatar: "🤖", notify_new_user: true, notify_new_job: true, notify_system_errors: true, notify_weekly_reports: false, theme: "dark", primary_color: "cyan", sidebar_style: "expanded" };
+  let current = {}, avatar = "🤖", cfg = null;
+
+  function showAvatar() {
+    $("avPrev").innerHTML = avatar === "🤖" ? '<img src="/static/img/bot.png" alt="">' : `<span>${avatar}</span>`;
+    document.querySelectorAll("#avatarPicker button").forEach((b) => b.classList.toggle("on", b.dataset.avatar === avatar));
+  }
+  function applyToForm(s) {
+    $("botName").value = s.bot_name || ""; $("welcomeMsg").value = s.welcome_message || ""; $("msgCount").textContent = `${$("welcomeMsg").value.length}/500`;
+    $("botActive").checked = s.bot_active !== false; $("botActiveTxt").textContent = $("botActive").checked ? "Active" : "Inactive";
+    avatar = s.bot_avatar || "🤖"; showAvatar();
+    ["notifyNewUser:notify_new_user", "notifyNewJob:notify_new_job", "notifySystemErrors:notify_system_errors", "notifyWeeklyReports:notify_weekly_reports"].forEach((m) => { const [id, k] = m.split(":"); $(id).checked = !!s[k]; });
+    document.querySelectorAll("#themeGroup button").forEach((b) => b.classList.toggle("on", b.dataset.theme === (s.theme || "dark")));
+    document.querySelectorAll("#colorSwatches button").forEach((b) => b.classList.toggle("on", b.dataset.color === (s.primary_color || "cyan")));
+    document.querySelectorAll("#sidebarGroup button").forEach((b) => b.classList.toggle("on", b.dataset.style === (s.sidebar_style || "expanded")));
+  }
+  const sel = (g, a) => (document.querySelector(`#${g} button.on`) || {}).dataset?.[a];
+  function readForm() {
+    return { bot_name: $("botName").value.trim() || "CareerMate", welcome_message: $("welcomeMsg").value, bot_active: $("botActive").checked, bot_avatar: avatar,
+      notify_new_user: $("notifyNewUser").checked, notify_new_job: $("notifyNewJob").checked, notify_system_errors: $("notifySystemErrors").checked, notify_weekly_reports: $("notifyWeeklyReports").checked,
+      theme: sel("themeGroup", "theme") || "dark", primary_color: sel("colorSwatches", "color") || "cyan", sidebar_style: sel("sidebarGroup", "style") || "expanded" };
+  }
+  function group(id, attr, onPick) {
+    $(id).addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return;
+      document.querySelectorAll(`#${id} button`).forEach((x) => x.classList.remove("on")); b.classList.add("on"); if (onPick) onPick(b.dataset[attr]); });
+  }
+  const preview = () => applyTheme({ theme: sel("themeGroup", "theme"), primary_color: sel("colorSwatches", "color"), sidebar_style: sel("sidebarGroup", "style") });
+  group("themeGroup", "theme", preview); group("colorSwatches", "color", preview); group("sidebarGroup", "style", preview);
+
+  $("welcomeMsg").addEventListener("input", () => { $("msgCount").textContent = `${$("welcomeMsg").value.length}/500`; });
+  $("botActive").addEventListener("change", () => { $("botActiveTxt").textContent = $("botActive").checked ? "Active" : "Inactive"; });
+  $("changeAv").addEventListener("click", () => { $("avatarPicker").hidden = !$("avatarPicker").hidden; });
+  $("avatarPicker").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; avatar = b.dataset.avatar; showAvatar(); });
+  $("copyWebhook").addEventListener("click", () => { const t = $("waWebhook").textContent; (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast("Webhook URL copied."), () => toast("Copy failed — select and copy manually.", true)); });
+
+  $("saveBtn").addEventListener("click", async () => {
+    try { current = await postJSON("/api/data/settings", readForm()); try { localStorage.setItem("cm_settings_cache", JSON.stringify(current)); } catch (e) {} applyTheme(current); toast("Settings saved."); }
+    catch (e) { toast("Could not save settings: " + e.message, true); }
+  });
+  $("resetBtn").addEventListener("click", () => { applyToForm(DEFAULTS); applyTheme(DEFAULTS); toast("Reset — remember to Save Changes."); });
+
+  /* modal */
+  const modal = (title, html) => { $("mTitle").textContent = title; $("mBody").innerHTML = html; $("stModal").hidden = false; };
+  $("mClose").addEventListener("click", () => { $("stModal").hidden = true; });
+  $("stModal").addEventListener("click", (e) => { if (e.target.id === "stModal") $("stModal").hidden = true; });
+  $("envBtn").addEventListener("click", () => {
+    const vars = (cfg && cfg.env_vars) || [];
+    modal("Environment Variables", vars.length ? `<p class="mnote">Values are never shown. Edit them in your Render dashboard → Environment.</p>` + vars.map((v) => `<div class="mrow"><code>${esc(v.name)}</code><span class="pill ${v.set ? "pill-green" : "pill-grey"}">${v.set ? "Set" : "Not set"}</span></div>`).join("") : "<p class='mnote'>Unavailable — update the backend files to expose this list.</p>");
+  });
+
+  function renderProviders() {
+    const P = [["NVIDIA NIM (Kimi)", "For AI-powered responses", "NVIDIA NIM", "NVIDIA_API_KEY"], ["OpenRouter", "Alternative AI provider", "OpenRouter", "OPENROUTER_API_KEY"], ["Google Gemini", "Backup AI model", "Google Gemini", "GEMINI_API_KEY"], ["Email Notifications", "Send emails to users (optional)", null, null]];
+    const map = {}; ((cfg && cfg.ai_providers) || []).forEach((p) => { map[p.name] = p.configured; });
+    $("aiProviders").innerHTML = P.map(([name, sub, key, env]) => `
+      <div class="st-tg api"><div><b>${esc(name)}</b><small>${esc(sub)}</small></div>
+      <label class="sw"><input type="checkbox" disabled ${key && map[key] ? "checked" : ""}><i></i></label>
+      <button class="st-cfg" type="button" data-n="${esc(name)}" data-e="${env || ""}">Configure</button></div>`).join("");
+    document.querySelectorAll(".st-cfg").forEach((b) => b.addEventListener("click", () => {
+      const env = b.dataset.e;
+      modal(b.dataset.n, env ? `<p class="mnote">Keys are stored as environment variables, never in this panel.</p><div class="mrow"><code>${esc(env)}</code><span class="pill ${(cfg.env_vars || []).find((v) => v.name === env)?.set ? "pill-green" : "pill-grey"}">${(cfg.env_vars || []).find((v) => v.name === env)?.set ? "Set" : "Not set"}</span></div><p class="mnote">Add or change it in your Render dashboard → Environment, then redeploy.</p>`
+        : `<p class="mnote">Email notifications aren't supported by the backend yet.</p>`);
+    }));
+  }
+
+  async function load() {
+    current = await fetchJSON("/api/data/settings"); applyToForm(current);
+    cfg = await fetchJSON("/api/data/config").catch(() => null);
+    if (cfg) {
+      const w = cfg.whatsapp || {};
+      const mask = (id, on) => { $(id).textContent = on ? "••••••••••••••••••••••" : "Not set"; $(id).classList.toggle("unset", !on); };
+      mask("waToken", w.access_token_set); mask("waVerify", w.verify_token_set); mask("waSecret", w.app_secret_set);
+      $("waGraph").textContent = cfg.graph_api_version || "Not set"; $("waWebhook").textContent = cfg.webhook_url;
+      const ok = w.access_token_set && w.phone_number_id_set && w.verify_token_set;
+      const box = $("waStatus"); box.classList.toggle("bad", !ok);
+      box.querySelector("b").textContent = ok ? "Webhook is configured" : "WhatsApp is not fully configured";
+      box.querySelector("small").textContent = ok ? "Access token, verify token and phone number ID are set." : "Set the missing variables in Render.";
+      $("dbType").textContent = cfg.database.type; $("dbUrl").textContent = cfg.database.url || `sqlite:///./${cfg.database.file}`; $("dbRecords").textContent = fmt(cfg.database.total_records);
+    } else { $("dbStatus").classList.add("bad"); }
+    renderProviders();
+  }
+  load();
+}
+</script>
+{% endblock %}
